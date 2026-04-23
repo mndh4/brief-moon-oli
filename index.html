@@ -326,9 +326,9 @@ async function sendMagicLink(){
   const email = document.getElementById('auth-email').value.trim();
   const msg = document.getElementById('auth-msg');
   const btn = document.getElementById('auth-btn');
-  if(!email){ showAuthMsg('error','Entre ton adresse email !'); return; }
+  if(!email){ showAuthMsg('error','Entre ton adresse email'); return; }
   const allowed = ['mounia.dahou89@gmail.com','yogi.babelevent@gmail.com'];
-  if(!allowed.includes(email.toLowerCase())){ showAuthMsg('error','Cette adresse email n'est pas autorisée.'); return; }
+  if(!allowed.includes(email.toLowerCase())){ showAuthMsg('error','Adresse email non autorisee.'); return; }
   btn.textContent = 'Envoi en cours...';
   btn.disabled = true;
   const { error } = await supa.auth.signInWithOtp({ email, options: { emailRedirectTo: window.location.href } });
