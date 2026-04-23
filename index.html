@@ -153,10 +153,22 @@ body{background:var(--bg-duo);font-family:-apple-system,'Inter',system-ui,sans-s
 .secret-title{font-size:11px;font-weight:900;color:rgba(26,26,26,.5);text-transform:uppercase;letter-spacing:.08em}
 .secret-lock{font-size:11px;font-weight:900;padding:3px 8px;border:var(--border);border-radius:20px;background:var(--black);color:var(--white);cursor:pointer}
 
+
+.gcal-btn{display:flex;align-items:center;gap:8px;background:var(--white);border:var(--border);border-radius:var(--radius-sm);padding:8px 12px;font-size:12px;font-weight:800;color:var(--black);cursor:pointer;box-shadow:2px 2px 0 var(--black);margin-bottom:8px;width:100%;-webkit-appearance:none}
+.gcal-btn:active{transform:translate(1px,1px);box-shadow:1px 1px 0 var(--black)}
+.gcal-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.gcal-status{font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;margin-left:auto}
+.gcal-connected{background:rgba(200,241,53,.4);color:#1a5e1a}
+.gcal-disconnected{background:rgba(255,122,47,.15);color:#c0392b}
+.gcal-events{margin-top:8px}
+.gcal-syncing{font-size:12px;color:rgba(26,26,26,.4);font-style:italic;padding:6px 0;text-align:center}
+
 .loading{text-align:center;padding:20px;font-size:13px;font-weight:700;color:rgba(26,26,26,.5)}
 .empty{font-size:12px;color:rgba(26,26,26,.4);font-style:italic;padding:4px 0}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<script>const GOOGLE_CLIENT_ID = "503034230066-km2gpsoimvn2j1ud1rgbs4fn9mfmc8je.apps.googleusercontent.com";</script>
 </head>
 <body>
 
@@ -300,12 +312,15 @@ body{background:var(--bg-duo);font-family:-apple-system,'Inter',system-ui,sans-s
     </div>
     <div class="sec-label">Agenda de Moon</div>
     <div class="card">
-      <div class="ag-day-row"><span class="ag-day-lbl">Aujourd'hui</span><span class="ag-count" style="background:var(--pink);color:white">Sync Google Cal.</span></div>
-      <div class="ag-item"><span class="ag-time">9h00</span><span class="ag-name">Réunion équipe</span><div class="ag-dot" style="background:var(--pink)"></div></div>
-      <div class="ag-item"><span class="ag-time">14h00</span><span class="ag-name">Rdv médecin</span><div class="ag-dot" style="background:var(--pink)"></div></div>
-      <div class="ag-item"><span class="ag-time">17h30</span><span class="ag-name">Yoga</span><div class="ag-dot" style="background:var(--pink)"></div></div>
+      <button class="gcal-btn" onclick="connectGCal('moon')">
+        <svg width="16" height="16" viewBox="0 0 48 48"><rect width="48" height="48" rx="4" fill="#fff"/><path d="M35 13H13v22h22V13z" fill="#fff"/><path d="M35 35H13V13h22v22z" fill="#1a73e8" opacity=".1"/><path d="M29 19H19v10h10V19z" fill="#ea4335"/><text x="24" y="43" text-anchor="middle" font-size="12" font-weight="900" fill="#1a73e8" font-family="sans-serif">31</text></svg>
+        <span id="gcal-moon-label">Connecter Google Calendar</span>
+        <span class="gcal-status gcal-disconnected" id="gcal-moon-status">Non connecté</span>
+      </button>
+      <div class="ag-day-row"><span class="ag-day-lbl">Aujourd'hui</span><span class="ag-count" style="background:var(--pink);color:white" id="gcal-moon-today-count">0 rdv</span></div>
+      <div id="gcal-moon-today"></div>
       <div class="ag-day-row" style="margin-top:10px;margin-bottom:8px"><span class="ag-day-lbl">Demain</span></div>
-      <div class="ag-item"><span class="ag-time">10h30</span><span class="ag-name">Conf. call client</span><div class="ag-dot" style="background:var(--pink)"></div></div>
+      <div id="gcal-moon-tomorrow"></div>
     </div>
     <div class="sec-label">Todos de Moon</div>
     <div class="card">
@@ -353,11 +368,15 @@ body{background:var(--bg-duo);font-family:-apple-system,'Inter',system-ui,sans-s
     </div>
     <div class="sec-label">Agenda d'Oli</div>
     <div class="card">
-      <div class="ag-day-row"><span class="ag-day-lbl">Aujourd'hui</span><span class="ag-count" style="background:var(--cyan)">Sync Google Cal.</span></div>
-      <div class="ag-item"><span class="ag-time">8h30</span><span class="ag-name">Sport — running</span><div class="ag-dot" style="background:var(--cyan)"></div></div>
-      <div class="ag-item"><span class="ag-time">12h30</span><span class="ag-name">Déjeuner Sara</span><div class="ag-dot" style="background:var(--cyan)"></div></div>
+      <button class="gcal-btn" onclick="connectGCal('oli')">
+        <svg width="16" height="16" viewBox="0 0 48 48"><rect width="48" height="48" rx="4" fill="#fff"/><path d="M35 13H13v22h22V13z" fill="#fff"/><path d="M35 35H13V13h22v22z" fill="#1a73e8" opacity=".1"/><path d="M29 19H19v10h10V19z" fill="#ea4335"/><text x="24" y="43" text-anchor="middle" font-size="12" font-weight="900" fill="#1a73e8" font-family="sans-serif">31</text></svg>
+        <span id="gcal-oli-label">Connecter Google Calendar</span>
+        <span class="gcal-status gcal-disconnected" id="gcal-oli-status">Non connecté</span>
+      </button>
+      <div class="ag-day-row"><span class="ag-day-lbl">Aujourd'hui</span><span class="ag-count" style="background:var(--cyan)" id="gcal-oli-today-count">0 rdv</span></div>
+      <div id="gcal-oli-today"></div>
       <div class="ag-day-row" style="margin-top:10px;margin-bottom:8px"><span class="ag-day-lbl">Demain</span></div>
-      <div class="ag-item"><span class="ag-time">9h00</span><span class="ag-name">Présentation Q2</span><div class="ag-dot" style="background:var(--cyan)"></div></div>
+      <div id="gcal-oli-tomorrow"></div>
     </div>
     <div class="sec-label">Todos d'Oli</div>
     <div class="card">
@@ -403,6 +422,141 @@ const MOON_IMG = '/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDB
 const OLI_IMG = '/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/2wBDAQkJCQwLDBgNDRgyIRwhMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjL/wAARCADIAMgDASIAAhEBAxEB/8QAHAAAAgIDAQEAAAAAAAAAAAAABAUDBgABAgcI/8QAPRAAAgEDAwIEAwYEBQQCAwAAAQIDAAQRBRIhMUEGEyJRYXGBFDJCkaGxByNSwRUWYnLRJDOy4SZkc5Lx/8QAGgEAAgMBAQAAAAAAAAAAAAAAAQIAAwQFBv/EACURAAICAgICAwACAwAAAAAAAAABAhEDIRIxBEETIlEUYQWBkf/aAAwDAQACEQMRAD8AtwHFZWIQ6BlOQRkGt4r0Z581WVlZRIaHWuhWsVsVCGVqt1o1CGA12DzXAFSAUGQ6FZWwK7VM0tkO4l4zRAziuEUkYFELhFwTVMmREW6ufssVycSRow9yKmKp1xXSsF+6KRu0FaI5NCty2YWaJcfgb+xoZtHuVJMU0cij+sbf1piJio5qveMfEZ0nRmEMm26m9MWOx7n6f8Vkn42OSuSNMMs26TAP8w6ZHey2c06xzxMUYZyM/A0zVXusNbMki9xvAI+h5rxgZaZWYksWySe5zV71ppFsZxE7JIfLCsvWubk8ON6Z0YlgvrCaN1vbUfzkHIH419qMhvormxW5H4eGHfPtSLQ5boIUmuJBJgEIrcqPc1xrFjKkUkyl8SgiUKwC/BiPftVP8d9NjcSWwha51CXUJUaRiSEc/dX4L7/Oi74k6fOCOqGpNPTZYTpuJC3ZVRnoNi8Cl/iOaSHRLhoX2MBjPXjNauPHQydqyKLUkiju4UO6aW1tsAdBj3rKrWneZh47dWaSaOMFgfusDyTWVZNp0LBNFxs7hrJxDKSYyeD7U2OCMjkGlt2kfkbpDgcDPsa1ZXZgkFtOfSfutXQ8fPxfxy/0YfIwclziMsVm0mpgldBcVu5GAiERxWCP1YNTVrHNDkyHBjrRjqcCthN1DkAHEdSBKIENYY8UOYSELXQFd7aFvruGytXlklRcKSMsBk0rlW2FRbdIM81YoizHAHWqtr/ia60W7jeTSRdW7Kc+axCDPTOO9cr4s02a5j86ciNADtAzub4/Km9zcWevaRcW8MqEyxlQSM7c96qk1NNJl8YSxyTkgPwtrOp6qrpe2CwRoPRIpOGH1q0Iu0ZJoTT4PsljBb5DeXGqZHfAokkiok6plc2nK0qI7maOCB5pWCogJJPQAV4x4g1d9Z1SS5YkRL6YlPZf/fWrz/EK7nh0u3gjbbHO5D+5AGcV5hKrM8SKM73xj3qrLL0a/GgkuTJEJLpwRyOtX+9MiwsVC5IX1N0Ue9U/WwItZm2gDG0gfQVeHy1q4ZQCbZTnsc81jyG6AZpFmltE0ivuaTq55JPx9vlXOu3MVtpM0kzYXG0fOi7do/K2oRvDtkDtk0t8T273GkCFBuLSAdKpap0OnasH0bUmvJ5EbKRvOzKh652r1o/V7SO4tPJYnaWBO32zS/RNMW11CP7RMBKwyqA/i+XyFNNes5XtXAJFso3OIz63xzijJ27BFUqEvnLGfsmkxea6n1MB6V+ZrKO0t4GjtQIGhjmcrHEh4yBnLHvWUqGtE+oYOnYY49S/vUl7HD9mjdjjOFB+NSS2y3cBiY4zyPmKHvsrawq3USLnFbGrMydE2jaqZGNrcAqVYqjN+LFPMEsw4wO+arMsSyeXGow7FyGHUEGg7zULrISd3G0BfSSM/GroZ3FVLZmyeMpyuOhvaavPf3csEcaRCEkszHO4A4wMULJ4tjR2UWL7kYqcuMHFLLC6SIz4YoXTAbB45pe3JfcDySc4pPnyfpb/AB8f4XHRda/xWSRPJMfljJy2c08AxXndkzW8qsh5JHfGa9Fiw0SEDggVoxZHNbMnkYlB2umbyRWmIwSa2eBzSHVrp3JtyxjgAzK27Bf/AEj2+NHJNQjyYmHFLLNRidXeqiQFbUq+DgysTsB9h/V+3xpDNplneTGW+knupP8AU21R8gKka8tSwU3MCgDAUOBge1Z9qjTG1lYe4Oa5OXyck3+HpPH8LFjVLbOBpWmLgLYRY+K5ruO2s7aUPBAIXHQxkitm7UjIFcNcoDziqPkl+mp4IVtD6z1nYoSQE4706gnS4jDocqelUlGRxlTimemai1q+xjuiPXHOD71tweW7rJ0cry/8bFx5Ye/wrPi6a71HxLNpvmDybePzUXHQ7cnmqgSwZSvUnGfarVrs+3xvfSxjdutwBz2KVWSPSQKuySTZmxRqKQZdxTaibrU44iLaMqjEnocYFW/V5pYNGaWI4YwxoCR7ikFj6fBOqqRybiLFWvUzbNpNtKzmWLy4x6eTnHSs+X0y7G7tAvhkzP5isScncGPUmjtdmaK1jEbIZC+GLH0p8TXXhu4ln86V4kigACovf61LqttENOnCjO4Z55NVN3stSrQBoOm5u1vHcyuQcO56n3A64p9qBxZThRuOwj9KXaeqpPbsMc2qjP1NE61crbaVczbC+1DwOKFV2ROxTYOFtNIJ4xO//jWVV0v7m4tLNesYlYiNBk9Ocmsq5aSKl2y6SXkYs/OgdZMEfdPuamMaTx7ZBwwz8qqfg/ThfRXbvLIkkWwoc9RVjTSpZPNNte3QaN8HewZementU+aK7B8TfRDFdw+d5IJ8+KTkkdATQ80Yk1MFucFsfDpTK+urphALq04iOTJCAwb5r1FLo5Y5bwNFKrggkjuPnTKSmrA4uLNvKY7lohEpA28nvk0Xe2qfZc4Gc46daXXVpcy6huCzKhKeradvBz1pvdN/JA7ZFNUWtAtpiCHT7sNxFlQeDkdKu8V5HYaEby63eXEoJCjnGcClMZ2pxXWruLnwLqQRj/LhB5HcMCasxOkyjPHlS/sTaz43uXxDpkKRlyVVy25if2Hv34pAyWcKtd67dPdzNykDMcZ9yBQuk4nu4GuJQgCuu4cE46c9jjvQXicxPMIbVESOMhSw5Lsfj3quU3J02aceKMFpAF5qGlmZmS3kOT0Tai/Tg1HDrNvB/wBiKaM//mLD8sUklAQ4J5qJWJYAck9KjqhlaZdm1XUJ9qWiM5Kbtw4GKgbV7pbeRrncrR8dev1p74RsQLTzpBneBGv+1ep/PP5Us8Z6b9mjluIc7HILL7MP+R+1Y1OLnxo3yxzWLnbsQSeIGfiSHzP9ztj8gcVJb6vaMw3Wnlt/VFK6kfrVeD5Pap0UgBsZHvWl1RjW3ZZbnUmQrKZpZYyNp80guo/3dxRkZgOnQ7OZtzb2x1HGOaQovnWbIfbiprGVhBbQ85kUAsCQQuen1FV8qGlHZY4NQjg8O31gQxluJY2X2AHXNXiK1B8PNDwrIg5XjHFeczwyQy7ZVKNwcH416VPcra6DcSsCVCjOB8BRm7oriqbCNLi22piz6QqYHzHNceIbhLHR5pihYbdvpHvQfhi/a+Mu/CBVQBc9sdaK8RQPe6Z5KKSjMMjOMiq3SY62hFoupyXWpWqyYRBBhAOc896da7GbvT5IVDsrDkKcGlmlRxWl3FE8oAGdsSnoaZatLO9qBbMkZc9XOMAdSajdsiVIQR6WLeAb2WCIfgU8n3yayl51HTnvEgknn1Cd3CjyeEH1P9qyo4NdhTXotOgaU2mzXIjcNC8YBBGCuOmKNtrtNO0SK5kBO5/WR1JJxmitPX+XOfZRSrUML4Qi3AkeYOh/1Gq4/aOwy09Dy1vre+DBMSFOGHcVFdaPYXhyUCv2bow+opb4VKNPfhc53jrUN5c3UGvSpFIfLMiDb169aHCn9WDlrY4ddVtbJraORbiDbtUSfeA/3Dr9aUS3Ijwk8ckTHjDDj8+lOtQ1D/DGhyCVkJHHbArq6uom0s3Twq6lQwyOufenhlyR1VglCLFSn+XxR8tuG8C6pnrJBIensM/2pWshI9EDLGe6j0ijL26urPwhIqRiSO4jkUkn/tgjHT41qUqRmyRul/ZSNEs0uNLlZW2SB1aOT+k4z+XOKrmr2t5bzsJVwSScjkE+4q4+DlWXw8JTz6sD6Af3qW+sxNneoYnk5rI8rjNnWj4/OCaPKXtFYlnJXnuwFF6Rok93cARZyTjzCOFHuPc1brjTbWAGR0RcewojQprd5JnJEcaDIz3qT8htaGx+D9vsPbeFdPtI0QYSNQqj2AoPUoBq2nXEOcMV4bHQ9j+dCv4jstSMtraNIzR8FihCn5HvQ6a7aaZLDb3LMJJzwQhKgfE9qypNO/Z0HGLjXo82vtPntrhoym0g8p/x7j9a6tUdAQc4PBVhV01dbd9VaBgro6h1Pz7V1a6Jblh/JUj5mtXz2tnNfhuMnxEelWFzfSJBBGxJ4JPAA+NTWsLS6mI1AGxMDPAAGR/evQNNs0gjWNUVVByAoxzVPtwsGu6kjIWEZMWB2yST/ahCfKVCZsXCNh3iNlGrJHGoLOIxv5xjZ7VYrWaXU/DJkdUCyY3KT7VUdSna6u4J8MiqyqX25Awv/qrJoKmbwaQwzhdwBPU1onXGzHHuhnoM0cbSJGd8gUAYHCj2orW3mNgWLvHHHywTrj4UJ4dNz5LGfy1DBWRUXAAplqZzYy8j7tUt7osXVld8PTJNqTBLJ418sOskxyzZOPpVjvT/ANJKpGfSQSe/FB2IUXdu20Am1H/kaJ1GdIrOVnKqoU8k0ZdgT0I9L0y3iGnyKijNweg/01lC2+tQR29mAS7Rzk7VHX01lXcVRUntl40ht8Mxbbnb2pVqG5PB0YXkmT5/iNCaDrYfWJrKNTsCkszPkY9xVj0yW1/wmJJ5Yhy3Dkf1H3rPFNIultivwkd1xqB2qPWOQOtAaiE/zJMd5B86LtxVstk0+GQvDJApbrsYc0DdaNZ3N0bkXO2QsGPqGCR0o2LRB4pDCK1wAfW3B+VHwwQ3Ggwx3TPFC0S7mjXcw+QqLWtPfU4oViniDRknBbrxipbgy2fhhsEebDFjg5GRUTI0DbII4v8AD7U3TW7gkzyRY2n2xSvxRqEVn4dj0ucfzmX+Uy5we+acWE7T2UTvyzx8446iqt4ss2AgluInhgt4XAkLZB9v3qSyTTp9CRx85JLs34XRE8Owqg43tx9anvXCIcdc0v8ACk2zRIYWPqVjn96n1GQ4YjoelZcj+zO549cEVPV5pLiYQJkZNSzoltYrAACxAyMZ4qNsLMWIy7Hj2FEXC21vb+fdPtJbgdz8qN9Dttt0Korma2UqBtzwoWobm4ebBkAcKeA3am7O01sZY7CQRKPvmM8UMZrWBc3Nqyq3O/Yfzo3sjxSrsGuYxPZpPH99Tye/FN9HudwUHnPFcPbW8lt59sy+Ww5xQemOEuFXB55xSt6DB8XUi+2XqIFUa+X/AOR6nt6ecxPz4q62MgVVbtiqYm26u9UmU+rzy2D1K56/qKbA9uzP5iuKSOjCZNFuCoJKTK3PTp8Ks2jxrZ+GJkkeNVReTn8qrfmBNNnjz95gQM16l/li1n0E2sQKLcwqWkc5IOM5ArXN6pnJj2VnRrn7XAiW5VtsShj1xyeKl1+O6i0i4mUHao6HjirFoXhO20S3aJLmWTdjcSAOlN20+0VcvGHH+vmhcbtBV9Hm3hr7RqOoxtc+YsMdvgbYzg89Kd6vp1lPYzQeWQ7rgPK+AD74qx6jeTWunytploJ7nGERcAA+5ryK+0TxbqF28t3a3LFiSSWwv71pxYZ5N1RTPJGOrGUGn6Tpgi+2asrPE+8LFjqKyuNH8INb3STawUUDlIQ24k+5x2rKryZMeOXG7LMeOU1yqi9aP4G03TQk66pJHevHtlljmBB9+CvSu9Q8F293ZC2HiSXYmSquiEZJz1ABpuijaK20aMhVhkHg0eCE5MqVn4EurHUY3svEtqsOwh5PLDEH4DpTb/Keo7zIni2PLdA1qpFM7HTrWxjMdtAsSsdxC+9FmNfahSJbK/deFdaMRli8R2M00ILRqbULlsdM571InhrxbPYjdqemB5E/mRiI+k+2RwaZO7wWM9xcRqDErPgHqAM15jY/xZLMRdIkTZ4wmR+YocUTky+Q6J4itkjjNrE5QetomBVh/pzg0N4ptLm40MwXNncJHGyyOXXjAPTIoTTP4tWQKrK52dMr6gPp1q4z6suuaNK9jJFPBJGdyKMk9+P+KSeJ02PhyKGRSX6eWWjCEudhRXPmbQMdQDiu7xw0eR3FGt/OupkTBcDJI7HFL7lcQeWy4KjaDj41hls7UFTYlYlroBFBbb0A9qh8MyRale30uqKRLCdkUTDlCMc/XpR+n+u6Y9uQMdgKYzWcBzcBQsp4LLwTSt+iyMJSVp0Phf2aW89qLV8TyODkDnavTrxxQk93p93bxK9tIoSMhSE6Bl4z+Waql5cPEBkkgEnJY9ahh1JomUR7gSf6s0FjD8VO+QBe3kejeInsYyHs7gcIv4T0P680SmyK8BUncpAwfjRY0KwvL1dQeNvtAA53HHHw6VHcwomphsdR1+tO6rQrjNbkPYLoLENrkAEEEc8fKk6WDW1xPMjht0TI+Ogct/waOto/IEgIyoG/j260zWyF5aWkUOyKSfLucddvv+f6UcfaK8k6jKT/ACv+lTuomjkKtjcOte038uoWvheKbT7dJ7hYUwjNgY2jJryXWYGt9RniYhivf6V7agH+BRj/AOuv/iK2p+zjsrXg+71rVftUmqxxxICFjVBz8c/pTHxTo9xqOjmO3vpbV0O4sn4h7VJ4cuIXW4hWRTKjAsoPIB6Uz1Bs2E/+2jbuwV6Kh4d03UTMsd9qUssEaYWJAFB+JI5oXxne2WjSQp9nlmlmJ2qHJGB1zk1Z9GIac8j7tUb+JEUy69ZSS4FsQyqR1zjmhKUpKmxoxSdpCKHxc0j3Aiszi3QcM+AAewrKQ2ez7Vq2z7vlp+9ZVXxQ/B/ll+nsUPiPQ5FGNVtAfYyAfvRDavYsqi2uYbl2YKEikUsc/DNE/ZbWUDdawOPjGDUQ03ToZFnjsbaOZTlXSIAj61psz0HqpzXRyK5X4GuLmSeOLdBEJn/pLbalolMA192Xw9qbKCSLWTAHyNfL7jB4/SvqkzzJbl3sJGZhholZTxQa+GdCvow8+hWyMeqvEAf0qJoh8ywSlJV969a8P+MtI0q606x021vUZ3VJ5Z5QQxPUgD49KvMn8OvC0xydIgU+65FQx/w58NwXMUwhKNFIJFBmOMj4VHRCfxRp2IUv4l24YiUKOhbo3HxA/OqfOiTugR8lRgluMk16myQzxSRSuhikQqfV1B615FrKNo2sT2Tu0kuQY5OMOOxrJmhe0b/Ey0uLApG+y3G0kdzhBxRkcokXAbNIpplZ3kaTMmfSoOdwqP7YUZckjv17+1UOBuhnrQff6abnHlsAe3PFCR6FcB1LSqMDpmuX1Ix4OSR7k1tdW8wsSeFbtUqQzcG9juGAWyKm/PHPvSy/RbiVJEYYQ8kH9KCn1MykiN8PnHFRNf8ACp1LY5XqOaKgxMmVPRYXuRHbbVU+dJxj3GM5/KpdMv5bC4juWQzYTaATwB8KeeE7K0tdPe51ELLcSoE8low3lp12/AnvinBfTp2ES6TAq4wARt4+GK0QxqMdnPy5ZZJUujz7U7l9Rv5rkxbC/wCEc4r2lyq6HEJZFhxbqGZzgD096pVzb6dbMCtkDz03n+9O7++m1jRGt8JA0gADAE4wQenfpTKS6KnF9la8NarGnjOYtLHCjx7G9JAkA6Hmrrf6haPayBLqFj7bxSq30t7jxG+otbtuEWI2QgD2PFB6ldTx6hLHMDDbW7AOsaAO5IyCT7U2gQg5MYaNeQ/ajukjX2ywFV3+KU6uNO8lopT5j+kMP6femthfp5VzbahHG7xFWRyqnKkZGcd6rH8RGgls9M8hU5kYMUQDAx8KZRtWCX1dMpWllnu9RV02Fo0yAc96yhNMvDa3d2+SCUAUkdayjT9A17Heg+L9U8LXLQ3jyXdmGKFS2SpH9JP7VftM8faJq0ywM8ltM/AEo4J+deS6/qKXSQok7ssa42MB6T3Oe+aGtNS0lIo/tNpKZFHJjkIzRXQGfQV0L6TabK8ihAGGWSLeD8etCl/EkfKtpc/zDp/zTLRoGi0m1WSNkleEF0ZtxXI6E+4/eurhEii8uWYL784NLyRKYpXUvEsbljotpLx1ju8fuKZxatKLTfdwxwzd40k37fmelK765Zo/Lt54wP6Vbk0ne62qULNu6tuHSq5T/B44/wBGl3q9zeXX2aEsTjO1TijLOwuSimd9gPQE5Y/SlWhWzS3L3LcdhVsjXYQzngc496r5sZxSI1iSGZLeIM0xGWLc7R8qonjYWmoahKsLCSWDEZK9nA5Ge/BAq63mox6fYXmoIN5RGZn7ZA4A+uK8Z8PzT32l3tySWle7Zxk9eBQnLRf4+PbYvurQjLxNiQHhPYfCl7tMxJ2sSc5AOcfD9qfTRtJIQWAZjwNmTQz28yMMNwe6jFDkPxdiKX7S7HG8DHIIrUc8kZctnOfbvThvMjJGCPVgsR9740MLEzo8jMwDdCB3ockSn6Aoo7uYskUW0nkuxwAKtHhLSkTVllnxK+G8rI6MFJyPrS60jJH2dFO045HBNWzw/Dt12yUDCjdkD3Iqc90OofVyYTcarPcLnAUMc+nimOmM8VgrsSXOVjz2FKfs+J3QdAxAFNWYJ/LXpGAg+ff9aN2yl0lSOn3Egu25vc0xSfZEsYOQR0x0NLN+4hTUqFmc5PSoK0We1lk8tPLJHlAdOpY8/lRt1pNhr5Wa6mkhuUXazRELuHx45pRC5UEhsYCjj5CjYpSpSRGwasW0V207Q20rSrTR7P7LaSRMjMWZpeWc+5NR32i2F3GySQ2nOeg/WiYbiOePdhAw6g4rs7DzhT+VDi0Byt2yvXPgbwzdRMiwlMjB8uWsp8cA5WMA+4FZU+36ROuj5+uf4a61HkGwd/8AY4NWjwb/AAot4pE1LxBCfSQ0NmWxyPxPjt7D8/avXridT6IVCqO+OTQbc9WA+tX83RVQIZWjkjIJykpRvkf/AO0m1kO8M+1iGSUZ2+3ajjcq+pXca8rsDr8SDj+9BX3pvJlb7s2G/SqWy6IDF5d3BtIGSuOfelpdoyVkw5jO3Egz+tEQsbe72n7pOfrXeqQD7Wkg4SQAn6daRjoaWE7x2gl8tI1yAuO9F3JZiqtJkYyx68+woMSD7F5pHpQekVMrCSyVicsCB86ADPE0IPhDU4xxttXIx7gA15b4UiEWgqp/Gxf8xXtXlRzh4ZkDxyAo6noQR0rxTQ5VSzkiThY5XRR7AMQKry9GrxHtoIuUYONgGQfSBxn/AN0PJmRAQNrHqoOMGjwwLdqHeFfNJxyO9VKRplDYqkhZuMkdc85xXVvC/wD2/UUJ4GKNMahyxI4FdQgDc2BU5A4GoIBADyC1WLw/CRqlq5HVS3/7Hj9B+tJLC3e/vo7dDgyHk/0qOSfoKtmnbFuY5kGF3BgPZeij8gKeCbdsrzySSiiK3twbp2YcCQ5qCI+ZFv7sS3600uk+zR3rf0l8fXp+9LrNP+lj+VXLox2bRTuBomFec1ipipY15qBGEb4dhx6SMg/IUVHIPu4A70sMm24k2jndz+QomN8HNOmVtDWGYqwIxx70wV0dd6qme4IpHHIKNgmKtnt3FP2I0HFwB0jx7c1lcuoZNwPGM1lCgGpHdlLFh8qhlOLcknOa1OwEDdz0AqOdx9kUL1FCwoUW0m3W0B4V0ZMfTP8Aapta4a3foSlKbuY2+oQTr+Bwx/OnOthXEGw5Xb1pX0OuxDcjO1+4NFXLedpccg6o39qhnUtARnkDiurF/NtZoSewb+396Hob2GyK3+ExAD73qNEWPr2IfcVJNEIdMQEc4AFDaeds6E8DdQB6Hscmbhzj7rftXimqKuh+MtW08jbEZzLH8n9X969hikxdzexORVC/ivovmQWmuQr64j5M5H9J+6T8jkfWg1eizDLjIQeedwOeKka4U855qv2V8Wj2MeaKNwu3k1Q47OgpWgtpMk+1czXSwxEk9aANwNvGTW7Kwn1nUoLGM+uZsE9kXqzfQUVEDnSLT4ailg0G91iUbXulMFqPZB95vqf2qyRoIby2gA626n8hioL6KPda6bariCFVjRfYdKNOJPEM2PuwQLH9TzVyWjBOXJ2zWvuEs22nmcrx+/7VBbR7YUXHRRUOpObnUo4R91P3phGmBTehDgrxXSDGK6Yc1scMo+NAlkMbbpZm7eY371IsvPFAQS5tcg8yOx/NjU27A4+7TCjKOWjIpPjSdJBRkUlFOgNDy3lJ9GevT51lBwSZrKs7FokZ2ktwx6bq5LgAqx4PSgL29KafF5RxkA5FCxXqP998fOqx6BdQTfIPbJFMzJ5mk20jtkqCn5cUHdKPKJHVTUZYto23PCynH5Ch6J7JTtMZwc0tt5ms7/K9j09xRVmPMgMhPJ4+VBXq7bhH9+tAZlrlc3VsrA5XGRioPJ8llI+dQaZPthCtytNhCJSuORQYDlSqhWH3m5NS3VrBf2MtrcRiWCVSro3Qg1pYcPs/WpQdjY60RTwbxJ4cuvDWptGwZ7R2P2efsw9j7MO4+tKvObpmvoO/tIrqB45I0kjb7yOoZT8wapV94J0SabeLWaA91gm2qfoQcfSlaNUMqrZ51aJNdTxwQxvLK5wiKMljXp+h6LD4esmkkKvfSriaQchR/Qvw9z3PwozTtNtNNjKWVpHbqRgsoyzD4seTRQtmuHAwdvYUEgTyXpEGnQASy30/AQFsntUGmOWt7i8k+9PKW+lTeILhba1TToT/ADJcF8e1QzYttPjgXqF5+dPRSyCxQzXckx96bqmBQ+nweXADjk80cV2pUYAYj1ZqGZwis39IJ/SpnwAaXX8uLWXnkqRUIB2DboY89FQfnRZbcc9FoGyOyAcfnR0ULTHc5wg6k0wDuM5BfGFFExS85oJ5hK+yPiJO/vUiNsG48Z6ZqEHMEmPxY+FZQsLlFDMfUei1lFMguachDbNnMb8fKoLpxGqOnY8/GsrKBBhNKJbQSj8UWT8+lalVoNBi3jBclvzrKyoyEWlNus8DrvOa1qMRKZHVTmsrKVhCbF/5Q57U0huHhAIPpPb2rKyiAYR3atjOKk3I/esrKBDewMMA1DJaButZWUSEDWQUZxmuLqeLTLNriXAwOB71lZUCin2rSX2otdT9WOce3sKYODcXAXtmsrKgWN4owoA9q5nPsaysqIAHI2aCaBrsuignAz0rKyogmo7TyAckMRWpRNN6SwWPvisrKZAZsbIAERQ79lHauiRbndKQ856DstZWVAHcczAl25J6k1lZWVAH/9k=';
 
 
+
+
+// === GOOGLE CALENDAR ===
+let gcalTokens = { moon: null, oli: null };
+let tokenClient = null;
+let currentGCalWho = null;
+
+function initGoogleClient(){
+  if(typeof google === 'undefined') return;
+  tokenClient = google.accounts.oauth2.initTokenClient({
+    client_id: GOOGLE_CLIENT_ID,
+    scope: 'https://www.googleapis.com/auth/calendar.readonly',
+    callback: async (resp) => {
+      if(resp.error) return;
+      gcalTokens[currentGCalWho] = resp.access_token;
+      localStorage.setItem('gcal_token_'+currentGCalWho, resp.access_token);
+      updateGCalStatus(currentGCalWho, true);
+      await fetchCalendarEvents(currentGCalWho);
+    }
+  });
+}
+
+function connectGCal(who){
+  currentGCalWho = who;
+  if(!tokenClient) initGoogleClient();
+  if(!tokenClient){ alert('Google API non chargée, réessaie dans 2 secondes'); return; }
+  const saved = localStorage.getItem('gcal_token_'+who);
+  if(saved){ gcalTokens[who]=saved; updateGCalStatus(who,true); fetchCalendarEvents(who); return; }
+  tokenClient.requestAccessToken({ prompt: 'consent' });
+}
+
+function updateGCalStatus(who, connected){
+  const label = document.getElementById('gcal-'+who+'-label');
+  const status = document.getElementById('gcal-'+who+'-status');
+  if(!label||!status) return;
+  if(connected){
+    label.textContent = 'Google Calendar connecté';
+    status.textContent = 'Connecté';
+    status.className = 'gcal-status gcal-connected';
+  } else {
+    label.textContent = 'Connecter Google Calendar';
+    status.textContent = 'Non connecté';
+    status.className = 'gcal-status gcal-disconnected';
+  }
+}
+
+async function fetchCalendarEvents(who){
+  const token = gcalTokens[who];
+  if(!token) return;
+  const color = who==='moon' ? 'var(--pink)' : 'var(--cyan)';
+  const todayEl = document.getElementById('gcal-'+who+'-today');
+  const tomorrowEl = document.getElementById('gcal-'+who+'-tomorrow');
+  const countEl = document.getElementById('gcal-'+who+'-today-count');
+  if(todayEl) todayEl.innerHTML = '<div class="gcal-syncing">Chargement...</div>';
+  
+  const now = new Date();
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
+  const todayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59).toISOString();
+  const tomorrowStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()+1).toISOString();
+  const tomorrowEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate()+1, 23, 59, 59).toISOString();
+
+  try {
+    // Récupérer la liste des agendas
+    const calsResp = await fetch('https://www.googleapis.com/calendar/v3/users/me/calendarList', {
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+    const calsData = await calsResp.json();
+    if(calsData.error){ handleGCalError(who, calsData.error); return; }
+    
+    const calendars = calsData.items || [];
+    let todayEvents = [], tomorrowEvents = [];
+
+    // Récupérer les events de chaque agenda
+    for(const cal of calendars){
+      try {
+        const [todayR, tomorrowR] = await Promise.all([
+          fetch(`https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(cal.id)}/events?timeMin=${todayStart}&timeMax=${todayEnd}&singleEvents=true&orderBy=startTime`, { headers: { 'Authorization': 'Bearer ' + token } }),
+          fetch(`https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(cal.id)}/events?timeMin=${tomorrowStart}&timeMax=${tomorrowEnd}&singleEvents=true&orderBy=startTime`, { headers: { 'Authorization': 'Bearer ' + token } })
+        ]);
+        const [td, tm] = await Promise.all([todayR.json(), tomorrowR.json()]);
+        if(td.items) todayEvents = todayEvents.concat(td.items);
+        if(tm.items) tomorrowEvents = tomorrowEvents.concat(tm.items);
+      } catch(e) {}
+    }
+
+    // Dédupliquer et trier
+    const dedup = (evs) => {
+      const seen = new Set();
+      return evs.filter(e => { if(seen.has(e.id)) return false; seen.add(e.id); return true; })
+        .sort((a,b) => (a.start?.dateTime||a.start?.date||'').localeCompare(b.start?.dateTime||b.start?.date||''));
+    };
+    todayEvents = dedup(todayEvents);
+    tomorrowEvents = dedup(tomorrowEvents);
+
+    const fmtTime = (ev) => {
+      if(ev.start?.dateTime){
+        const d = new Date(ev.start.dateTime);
+        return d.getHours()+'h'+(d.getMinutes()?String(d.getMinutes()).padStart(2,'0'):'00');
+      }
+      return 'Jour';
+    };
+
+    const mkEvents = (evs) => evs.length===0
+      ? '<div class="empty">Aucun événement</div>'
+      : evs.map(ev=>`<div class="ag-item"><span class="ag-time">${fmtTime(ev)}</span><span class="ag-name">${ev.summary||'Sans titre'}</span><div class="ag-dot" style="background:${color}"></div></div>`).join('');
+
+    if(todayEl) todayEl.innerHTML = mkEvents(todayEvents);
+    if(tomorrowEl) tomorrowEl.innerHTML = mkEvents(tomorrowEvents);
+    if(countEl) countEl.textContent = todayEvents.length + ' rdv';
+
+  } catch(e) {
+    if(todayEl) todayEl.innerHTML = '<div class="empty">Erreur de connexion</div>';
+  }
+}
+
+function handleGCalError(who, error){
+  if(error.code === 401){
+    localStorage.removeItem('gcal_token_'+who);
+    gcalTokens[who] = null;
+    updateGCalStatus(who, false);
+  }
+}
+
+// Charger les tokens sauvegardés au démarrage
+function initSavedGCalTokens(){
+  ['moon','oli'].forEach(who => {
+    const saved = localStorage.getItem('gcal_token_'+who);
+    if(saved){ gcalTokens[who]=saved; updateGCalStatus(who,true); fetchCalendarEvents(who); }
+  });
+}
+
+// Init Google client quand l'API est chargée
+window.addEventListener('load', () => {
+  setTimeout(() => { initGoogleClient(); initSavedGCalTokens(); }, 1000);
+});
 
 // === PIN & TODOS SECRETES ===
 let pinTarget = null;
