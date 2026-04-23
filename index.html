@@ -790,6 +790,32 @@ window.addEventListener('load',()=>{
 });
 
 async function init(){
+  // Si l'URL contient un token magic link, laisser Supabase le traiter
+  const hash = window.location.hash;
+  if(hash && hash.includes('access_token')){
+    // Supabase va déclencher onAuthStateChange automatiquement
+    // On attend qu'il le fasse
+    await new Promise(resolve => {
+      const unsub = supa.auth.onAuthStateChange((event, session) => {
+        if(session){
+          showApp();
+          loadTodos('duo');loadTodos('moon');loadTodos('oli');
+          loadInts('duo');loadInts('moon');loadInts('oli');
+          loadCourses();
+          renderCtx();
+          // Nettoyer l'URL
+          window.history.replaceState({}, document.title, window.location.pathname);
+          resolve();
+        }
+      });
+      // Timeout de secours après 3 secondes
+      setTimeout(()=>{
+        resolve();
+        checkAuth();
+      }, 3000);
+    });
+    return;
+  }
   await checkAuth();
   ['duo','moon','oli'].forEach(w=>{loadTodos(w);loadInts(w);});
   loadCourses();
