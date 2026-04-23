@@ -261,16 +261,8 @@ body{font-family:-apple-system,system-ui,sans-serif;min-height:100vh;transition:
         <span class="gcst gcoff" id="gcs-duo">Non connecte</span>
       </button>
       <div id="gcev-duo"></div>
-      <div class="agrow"><span class="aglbl">Aujourd&#39;hui</span><span class="agbadge" id="agcnt" style="background:var(--ye)">0 rdv</span></div>
-      <div id="agtd"></div>
-      <div class="agrow" style="margin-top:10px;margin-bottom:8px"><span class="aglbl">Demain</span></div>
-      <div id="agtm"></div>
-      <div class="addrow">
-        <input class="sm" id="agtime" placeholder="18h00"/>
-        <input id="agname" placeholder="Evenement..." onkeydown="if(event.key==='Enter')addEv()"/>
-        <select id="agday"><option value="today">Auj.</option><option value="tomorrow">Dem.</option></select>
-        <button class="addbtn" onclick="addEv()" style="color:var(--duo)">+</button>
-      </div>
+
+
     </div>
 
     <div class="slbl">Todos communes</div>
@@ -401,11 +393,42 @@ const OLI_B64='/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSE
 
 const supa=supabase.createClient(SUPA_URL,SUPA_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
 
-function getToken(){try{const s=JSON.parse(localStorage.getItem('sb-lrjiliaoxbotbftdrexi-auth-token')||'{}');return s?.access_token||SUPA_KEY;}catch{return SUPA_KEY;}}
-async function sbGet(t,f=''){const r=await fetch(`${SUPA_URL}/rest/v1/${t}?${f}&order=created_at.asc`,{headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+getToken()}});return r.json();}
-async function sbPost(t,b){const r=await fetch(`${SUPA_URL}/rest/v1/${t}`,{method:'POST',headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+getToken(),'Content-Type':'application/json','Prefer':'return=representation'},body:JSON.stringify(b)});return r.json();}
-async function sbPatch(t,id,b){await fetch(`${SUPA_URL}/rest/v1/${t}?id=eq.${id}`,{method:'PATCH',headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+getToken(),'Content-Type':'application/json'},body:JSON.stringify(b)});}
-async function sbDel(t,id){await fetch(`${SUPA_URL}/rest/v1/${t}?id=eq.${id}`,{method:'DELETE',headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+getToken()}});}
+async function getToken(){
+  try{
+    const {data:{session}} = await supa.auth.getSession();
+    return session?.access_token || SUPA_KEY;
+  }catch{return SUPA_KEY;}
+}
+async function sbGet(t,f=''){
+  let q=supa.from(t).select('*').order('created_at',{ascending:true});
+  if(f){
+    const parts=f.split('&').filter(Boolean);
+    for(const p of parts){
+      const eq=p.match(/^(\w+)=eq\.(.+)$/);
+      if(eq)q=q.eq(eq[1],eq[2]);
+    }
+  }
+  const{data,error}=await q;
+  if(error){console.warn('sbGet error:',error);return[];}
+  return data||[];
+}
+async function getToken(){
+  try{const{data:{session}}=await supa.auth.getSession();return session?.access_token||SUPA_KEY;}
+  catch{return SUPA_KEY;}
+}
+async function sbPost(t,b){
+  const{data,error}=await supa.from(t).insert(b).select();
+  if(error)console.warn('sbPost error:',error);
+  return data;
+}
+async function sbPatch(t,id,b){
+  const{error}=await supa.from(t).update(b).eq('id',id);
+  if(error)console.warn('sbPatch error:',error);
+}
+async function sbDel(t,id){
+  const{error}=await supa.from(t).delete().eq('id',id);
+  if(error)console.warn('sbDel error:',error);
+}
 
 // AUTH
 async function sendLink(){
@@ -488,30 +511,7 @@ function sw(t){
   document.getElementById('ctxarr').style.background=bg;
 }
 
-// AGENDA
-async function loadAg(){
-  const items=await sbGet('agenda','');
-  const td=items.filter(e=>e.day==='today').sort((a,b)=>a.time.localeCompare(b.time));
-  const tm=items.filter(e=>e.day==='tomorrow').sort((a,b)=>a.time.localeCompare(b.time));
-  const colors=['var(--ye)','var(--pu)','var(--gr)','var(--or)','var(--pk)','var(--cy)'];
-  const mk=(list,id)=>{
-    const el=document.getElementById(id);if(!el)return;
-    if(!list.length){el.innerHTML='<div class="empty">Aucun evenement</div>';return;}
-    el.innerHTML=list.map((ev,i)=>`<div class="agitem"><span class="agtime">${ev.time||'-'}</span><span class="agname">${ev.name}</span><div class="agdot" style="background:${colors[i%colors.length]}"></div><button class="delbtn" onclick="delEv('${ev.id}')">x</button></div>`).join('');
-  };
-  mk(td,'agtd');mk(tm,'agtm');
-  document.getElementById('agcnt').textContent=td.length+' rdv';
-}
-async function addEv(){
-  const t=document.getElementById('agtime').value.trim();
-  const n=document.getElementById('agname').value.trim();
-  const d=document.getElementById('agday').value;
-  if(!n)return;
-  await sbPost('agenda',{time:t,name:n,day:d,owner:'duo'});
-  document.getElementById('agtime').value='';document.getElementById('agname').value='';
-  loadAg();
-}
-async function delEv(id){await sbDel('agenda',id);loadAg();}
+// AGENDA (lecture seule depuis Google Calendar)
 
 // TODOS
 function gc(k){try{return JSON.parse(localStorage.getItem(k)||'null');}catch{return null;}}
@@ -692,6 +692,8 @@ async function gcLoadPerso(who,token){
     if(cals.error){localStorage.removeItem('gct_'+who);gcSetStatus(who,false);return;}
     let tdEvs=[],tmEvs=[];
     for(const cal of(cals.items||[])){
+      // Exclure le Cal commun des vues perso
+      if(cal.summary&&cal.summary.toLowerCase().includes('commun'))continue;
       try{
         const[td,tm]=await Promise.all([gcFetch(token,cal.id,tmin,tmax),gcFetch(token,cal.id,tmin2,tmax2)]);
         if(td.items)tdEvs=tdEvs.concat(td.items);
@@ -746,7 +748,6 @@ window.addEventListener('load',()=>{
 
 async function init(){
   await checkAuth();
-  loadAg();
   ['duo','moon','oli'].forEach(w=>{loadTodos(w);loadInts(w);});
   loadCourses();
   renderCtx();
