@@ -176,9 +176,11 @@ body{font-family:-apple-system,system-ui,sans-serif;min-height:100vh;transition:
       <div style="font-size:20px;font-weight:900;color:var(--bk)">+</div>
       <div class="auth-av"><img id="avo" src="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDABQODxIPDRQSEBIXFRQYHjIhHhwcHj0sLiQySUBMS0dARkVQWnNiUFVtVkVGZIhlbXd7gYKBTmCNl4x9lnN+gXz/2wBDARUXFx4aHjshITt8U0ZTfHx8fHx8fHx8fHx8fHx8fHx8fHx8fHx8fHx8fHx8fHx8fHx8fHx8fHx8fHx8fHx8fHz/wAARCAA8ADwDASIAAhEBAxEB/8QAGgAAAgMBAQAAAAAAAAAAAAAABAUBAgMGAP/EAC8QAAICAQMCBQEHBQAAAAAAAAECAxEABBIhMUEFEyJRYRQjMnGRobHxQmKBwdH/xAAYAQADAQEAAAAAAAAAAAAAAAABAgMABP/EABsRAAMBAQEBAQAAAAAAAAAAAAABAhEDITFx/9oADAMBAAIRAxEAPwBkpDCxkhTmIZo33Dm+o98zfWS1uRQFvuOgzqXRZ6cr5vfAsKby6ijZyrzpHCsjEDcOB3OLZNZHK1tMRt7AlQM1dEgxydjaGRJlLKpoEj1LX74pl17S69kgoRKpHA4Yjvmg8SjEMieYpbadp73i/Qp9qSDVXt462D/zJU1SKTDl+jTfTQq5AL2doHfB9025qY1uNUCcJUerTl25rv1JwZ9QVkcJGxAY/HfJLz4UCYo1RY4nLbiPvDnoL754RqqBlYMCASb7duM1VJB5RlhJf+x1ocV75ZIXUALE59IXmj0Pwcy1BeCzxCNpHYxkFhCor2snF3h+l8uZ5J9tAUFJ6nHGpDw6mYOCNyrtsVXxi1IhLuBYIRzbEi7xatlucLEwFtHJ9Ywip1JtSD2w7RAwTopNtbL+HGRDth1QUH7vDUePcYVo4hL4hTAjcWcECz0OZVoLhJagrl/pWIsgdTmEgBke5wOTxxxjH6VfLgKLIzlfQz8AGv6hilWjtt89tuN7IgBf5Y36S/B7DKroJPMjaMjhlPGA+J6GTxFo20+rWAxg3z1v8DkeGeFzeHzSy6iVGL8BUHH43mkhMjgdATRAzOsMlpR4JF8P3TSrNJFxuS+V/wA98TPqY9mxiQB0rHviTMdGu07V8xQ1e381iGWAHp+eTprS8al4WhlWWSOKOzRuz/vG+kQRaiOTzA4VWApauxi/QaYW1DscOQHiunQZkC9f0YRNMvkIylyoJ3AWDnPnS6lJJA2mm5Y1SGqzodPOV78e2E+Ye2PpIEnkrafZgcGWhOATwT+ozIOWY2eo5yx7n2kP74oxvLAdRo5IL2sR6T7HqM525zL5JiYS3W2s6mJiRRyzxKxsjnA1o01gr08R00QBNsAST7n+T+mbBdiD4GQDvna+zUB8Dpl5ueOx4wgM45Oh+MMjm9PXAdoXgdBkq5Awin//2Q==" alt="Oli"/></div>
     </div>
-    <div class="auth-lbl">Ton email</div>
-    <input class="auth-in" type="email" id="auth-email" placeholder="ton@email.com"/>
-    <button class="auth-btn" id="auth-btn" onclick="sendLink()">Recevoir le lien de connexion</button>
+    <div class="auth-lbl">Email</div>
+    <input class="auth-in" type="email" id="auth-email" placeholder="ton@email.com" onkeydown="if(event.key==='Enter')document.getElementById('auth-pass').focus()"/>
+    <div class="auth-lbl" style="margin-top:6px">Mot de passe</div>
+    <input class="auth-in" type="password" id="auth-pass" placeholder="Mot de passe" onkeydown="if(event.key==='Enter')signIn()"/>
+    <button class="auth-btn" id="auth-btn" onclick="signIn()">Se connecter</button>
     <div class="auth-msg" id="auth-msg"></div>
     <div class="auth-note">Un lien de connexion sera envoye par email.</div>
   </div>
@@ -427,371 +429,31 @@ async function sbDel(t,id){
 }
 
 // AUTH - magic link
-async function sendLink(){
+// AUTH - email + mot de passe
+async function signIn(){
   const email=document.getElementById('auth-email').value.trim();
+  const pass=document.getElementById('auth-pass').value;
   const msg=document.getElementById('auth-msg');
   const btn=document.getElementById('auth-btn');
   msg.className='auth-msg';
-  if(!email){msg.textContent='Entre ton adresse email';msg.className='auth-msg err';return;}
-  const ok=['mounia.dahou89@gmail.com','yogi.babelevent@gmail.com'];
-  if(!ok.includes(email.toLowerCase())){msg.textContent='Adresse non autorisee';msg.className='auth-msg err';return;}
-  btn.textContent='Envoi...';btn.disabled=true;
-  const{error}=await supa.auth.signInWithOtp({
-    email,
-    options:{
-      emailRedirectTo:'https://brief-moon-oli-8zpk.vercel.app',
-      shouldCreateUser:false
-    }
-  });
-  if(error){msg.textContent='Erreur: '+error.message;msg.className='auth-msg err';btn.textContent='Recevoir le lien de connexion';btn.disabled=false;return;}
-  msg.textContent='Lien envoye ! Verifie ta boite email et clique sur le lien.';msg.className='auth-msg ok';
-  btn.textContent='Lien envoye !';
+  if(!email||!pass){msg.textContent='Entre ton email et mot de passe';msg.className='auth-msg err';return;}
+  btn.textContent='Connexion...';btn.disabled=true;
+  const{error}=await supa.auth.signInWithPassword({email,password:pass});
+  if(error){msg.textContent='Email ou mot de passe incorrect';msg.className='auth-msg err';btn.textContent='Se connecter';btn.disabled=false;return;}
+  showApp();loadAll();
 }
 async function signOut(){
   await supa.auth.signOut();
   document.getElementById('auth').style.display='flex';
+  document.getElementById('auth-email').value='';
+  document.getElementById('auth-pass').value='';
 }
 function showApp(){document.getElementById('auth').style.display='none';}
-
-
-
-// DATE & CTX
-const N=new Date();
-const DSH=['dim','lun','mar','mer','jeu','ven','sam'];
-const DFL=['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'];
-const MN=['jan','fev','mar','avr','mai','jun','jul','aou','sep','oct','nov','dec'];
-const dow=N.getDay(),dom=N.getDate();
-document.getElementById('dpill').textContent=DSH[dow]+' '+dom+' '+MN[N.getMonth()];
-document.getElementById('ctxday').textContent=DFL[dow]+' '+dom;
-let ctxM=dom===1?'month':dow===5?'weekend':dow===1?'week':'day';
-const ctxL={day:'Vue du jour',weekend:'Vue du weekend',week:'Vue de la semaine',month:'Vue du mois'};
-document.getElementById('ctxsub').textContent=ctxL[ctxM];
-
-function cycleCtx(){
-  const o=['day','weekend','week','month'];
-  ctxM=o[(o.indexOf(ctxM)+1)%4];
-  document.getElementById('ctxsub').textContent=ctxL[ctxM];
-  renderCtx();
-}
-function renderCtx(){
-  const el=document.getElementById('ctxview');
-  const tl=document.getElementById('ctxvtitle');
-  const gr=document.getElementById('ctxgrid');
-  if(ctxM==='day'){el.style.display='none';return;}
-  el.style.display='block';
-  let days=[],title='';
-  if(ctxM==='weekend'){
-    const f=new Date(N);f.setDate(dom+(5-dow+7)%7);
-    days=[f,new Date(f.getTime()+86400000),new Date(f.getTime()+172800000)];
-    title='Ce weekend';
-  }else if(ctxM==='week'){
-    const m=new Date(N);m.setDate(dom+(1-dow+7)%7);
-    days=Array.from({length:7},(_,i)=>{const d=new Date(m);d.setDate(m.getDate()+i);return d;});
-    title='Cette semaine';
-  }else{
-    const first=new Date(N.getFullYear(),N.getMonth(),1);
-    const last=new Date(N.getFullYear(),N.getMonth()+1,0);
-    let cur=new Date(first);days=[];
-    while(cur<=last){const s=new Date(cur),e=new Date(cur);e.setDate(cur.getDate()+6);if(e>last)e.setTime(last.getTime());days.push({s,e,w:true});cur.setDate(cur.getDate()+7);}
-    title=N.toLocaleDateString('fr-FR',{month:'long',year:'numeric'});
-    title=title.charAt(0).toUpperCase()+title.slice(1);
-  }
-  tl.textContent=title;
-  gr.innerHTML=days.map(d=>{
-    if(d.w)return`<div class="ctx-cell"><div class="ctx-cell-d">Sem.</div><div class="ctx-cell-dt">${d.s.getDate()}-${d.e.getDate()} ${MN[d.e.getMonth()]}</div><div class="ctx-cell-n">Aucun rdv</div></div>`;
-    return`<div class="ctx-cell"><div class="ctx-cell-d">${DSH[d.getDay()]}</div><div class="ctx-cell-dt">${d.getDate()} ${MN[d.getMonth()]}</div><div class="ctx-cell-n">Aucun rdv</div></div>`;
-  }).join('');
-}
-
-// SWIPE
-let swX0=null;
-document.addEventListener('touchstart',e=>{swX0=e.touches[0].clientX;},{passive:true});
-document.addEventListener('touchend',e=>{
-  if(swX0===null)return;
-  const dx=e.changedTouches[0].clientX-swX0;
-  swX0=null;
-  if(Math.abs(dx)<60)return;
-  const tabs=['duo','moon','oli'];
-  const cur=tabs.find(t=>document.getElementById('v'+t).style.display!=='none')||'duo';
-  const idx=tabs.indexOf(cur);
-  if(dx<0&&idx<2)sw(tabs[idx+1]);
-  else if(dx>0&&idx>0)sw(tabs[idx-1]);
-},{passive:true});
-
-// TAB SWITCH
-function sw(t){
-  ['duo','moon','oli'].forEach(x=>{
-    document.getElementById('v'+x).style.display=x===t?'block':'none';
-    document.getElementById('t'+x).className='tab';
-    if(x===t)document.getElementById('t'+x).classList.add(x==='duo'?'aduo':x==='moon'?'amoon':'aoli');
-  });
-  const bg=t==='duo'?'var(--duo)':t==='moon'?'var(--moon)':'var(--oli)';
-  document.body.style.background=bg;
-  document.getElementById('ctxlbl').style.color=bg;
-  document.getElementById('ctxarr').style.background=bg;
-}
-
-// AGENDA (lecture seule depuis Google Calendar)
-
-// TODOS
-function gc(k){try{return JSON.parse(localStorage.getItem(k)||'null');}catch{return null;}}
-function sc(k,v){localStorage.setItem(k,JSON.stringify(v));}
-function defCats(w){
-  if(w==='duo')return[{id:'maison',name:'Maison',open:true,col:'var(--duo)',subs:[{id:'cuisine',name:'Cuisine',open:true},{id:'salon',name:'Salon',open:false},{id:'chambre',name:'Chambre',open:false}]},{id:'jardin',name:'Jardin',open:false,col:'var(--cy)',subs:[{id:'entretien',name:'Entretien',open:true}]},{id:'admin',name:'Admin',open:false,col:'var(--or)',subs:[{id:'factures',name:'Factures',open:true},{id:'docs',name:'Documents',open:false}]}];
-  return[];
-}
-function getCats(w){return gc('cats_'+w)||defCats(w);}
-function saveCats(w,d){sc('cats_'+w,d);}
-
-async function loadTodos(w){
-  const cats=getCats(w);
-  const items=await sbGet('To do','owner=eq.'+w);
-  const el=document.getElementById('cats-'+w);if(!el)return;
-  if(!cats.length){el.innerHTML='<div class="empty">Aucune categorie</div>';return;}
-  el.innerHTML=cats.map((c,ci)=>{
-    const ci_items=Array.isArray(items)?items.filter(i=>i.category===c.id):[];
-    const tot=ci_items.length,dn=ci_items.filter(i=>i.done).length;
-    return`<div class="catblock">
-      <div class="cathead" style="background:${c.col}22" onclick="togCat('${w}',${ci})">
-        <div class="caticon" style="background:${c.col};border:2px solid var(--bk)">${c.name.charAt(0)}</div>
-        <span class="catnm">${c.name}</span>
-        ${tot>0?`<span class="catcnt">${dn}/${tot}</span>`:''}
-        <span class="chev${c.open?' op':''}">&#9654;</span>
-        <button class="delbtn" onclick="event.stopPropagation();delCat('${w}',${ci})">x</button>
-      </div>
-      ${c.open?`<div>${c.subs.map((s,si)=>{
-        const si_items=ci_items.filter(i=>i.subcategory===s.id);
-        return`<div class="subblock">
-          <div class="sublbl" onclick="togSub('${w}',${ci},${si})">
-            <span class="chev${s.open?' op':''}">&#9654;</span>${s.name}
-            <button class="delbtn" onclick="event.stopPropagation();delSub('${w}',${ci},${si})">x</button>
-          </div>
-          ${s.open?`<div>
-            ${si_items.length===0?'<div class="empty">Aucune tache</div>':si_items.map(it=>`<div class="titem"><input type="checkbox" class="tcb" ${it.done?'checked':''} onchange="togTodo('${it.id}','${w}')"/><span class="ttxt${it.done?' dn':''}">${it.text}</span><button class="delbtn" onclick="delTodo('${it.id}','${w}')">x</button></div>`).join('')}
-            <div class="addrow" style="margin-top:6px"><input class="addin" id="ia_${w}_${ci}_${si}" placeholder="Ajouter une tache..."/><button class="addbtn" onclick="addTodo('${w}','${c.id}','${s.id}',${ci},${si})" style="color:${c.col}">+</button></div>
-          </div>`:''}
-        </div>`;
-      }).join('')}
-      <div class="addrow" style="margin-top:8px;padding-top:8px;border-top:1px dashed rgba(26,26,26,.1)"><input class="addin" id="sa_${w}_${ci}" placeholder="Nouvelle sous-categorie..."/><button class="addbtn" onclick="addSub('${w}',${ci})" style="font-size:11px">+ Sous-cat.</button></div>
-      </div>`:''}
-    </div>`;
-  }).join('');
-}
-function togCat(w,ci){const c=getCats(w);c[ci].open=!c[ci].open;saveCats(w,c);loadTodos(w);}
-function togSub(w,ci,si){const c=getCats(w);c[ci].subs[si].open=!c[ci].subs[si].open;saveCats(w,c);loadTodos(w);}
-function addCat(w){const inp=document.getElementById('nc-'+w);const n=inp.value.trim();if(!n)return;const c=getCats(w);const cols=['var(--duo)','var(--pk)','var(--cy)','var(--or)','var(--pu)','var(--ye)','var(--gr)'];c.push({id:'c'+Date.now(),name:n,open:true,col:cols[c.length%cols.length],subs:[]});saveCats(w,c);inp.value='';loadTodos(w);}
-function delCat(w,ci){const c=getCats(w);c.splice(ci,1);saveCats(w,c);loadTodos(w);}
-function addSub(w,ci){const inp=document.getElementById(`sa_${w}_${ci}`);const n=inp.value.trim();if(!n)return;const c=getCats(w);c[ci].subs.push({id:'s'+Date.now(),name:n,open:true});saveCats(w,c);inp.value='';loadTodos(w);}
-function delSub(w,ci,si){const c=getCats(w);c[ci].subs.splice(si,1);saveCats(w,c);loadTodos(w);}
-async function addTodo(w,cat,sub,ci,si){const inp=document.getElementById(`ia_${w}_${ci}_${si}`);const t=inp.value.trim();if(!t)return;await sbPost('To do',{owner:w,category:cat,subcategory:sub,text:t,done:false});inp.value='';loadTodos(w);}
-async function togTodo(id,w){const items=await sbGet('To do','owner=eq.'+w);const it=Array.isArray(items)&&items.find(i=>i.id===id);if(it)await sbPatch('To do',id,{done:!it.done});loadTodos(w);}
-async function delTodo(id,w){await sbDel('To do',id);loadTodos(w);}
-
-// INTERESTS
-function defInts(w){if(w==='duo')return[{id:'restos',name:'Restos a tester'},{id:'films',name:'Films et series a voir'}];return[];}
-function getInts(w){return gc('ints_'+w)||defInts(w);}
-function saveInts(w,d){sc('ints_'+w,d);}
-
-async function loadInts(w){
-  const cats=getInts(w);
-  const items=await sbGet('Interests','owner=eq.'+w);
-  const el=document.getElementById('int-'+w);if(!el)return;
-  const tag=w==='duo'?'tgd':w==='moon'?'tgm':'tgo';
-  const tl=w==='duo'?'Commun':w==='moon'?'Moon':'Oli';
-  if(!cats.length){el.innerHTML='<div class="empty">Aucune categorie</div>';return;}
-  el.innerHTML=cats.map((c,ci)=>{
-    const ci_items=Array.isArray(items)?items.filter(i=>i.category===c.id):[];
-    return`<div class="intsec">
-      <div class="introw">
-        <span class="intnm">${c.name}</span>
-        <div style="display:flex;align-items:center;gap:6px">
-          <span class="inttag ${tag}">${tl}</span>
-          <button class="delbtn" onclick="delIntCat('${w}',${ci})">x</button>
-        </div>
-      </div>
-      ${ci_items.length===0?'<div class="empty">Aucun element</div>':ci_items.map(it=>`<div class="intitem"><input type="checkbox" class="icb" ${it.done?'checked':''} onchange="togInt('${it.id}','${w}')"/><span class="inm${it.done?' dn':''}">${it.text}</span><button class="delbtn" onclick="delInt('${it.id}','${w}')">x</button></div>`).join('')}
-      <div class="addrow" style="margin-top:6px"><input class="addin" id="ii_${w}_${ci}" placeholder="Ajouter..."/><button class="addbtn" onclick="addInt('${w}','${c.id}',${ci})" style="color:${w==='moon'?'var(--pk)':w==='oli'?'var(--cy)':'var(--duo)'}">+</button></div>
-      ${ci<cats.length-1?'<div class="isep"></div>':''}
-    </div>`;
-  }).join('');
-}
-function addIntCat(w){const inp=document.getElementById('ni-'+w);const n=inp.value.trim();if(!n)return;const c=getInts(w);c.push({id:'i'+Date.now(),name:n});saveInts(w,c);inp.value='';loadInts(w);}
-function delIntCat(w,ci){const c=getInts(w);c.splice(ci,1);saveInts(w,c);loadInts(w);}
-async function addInt(w,cat,ci){const inp=document.getElementById(`ii_${w}_${ci}`);const t=inp.value.trim();if(!t)return;await sbPost('Interests',{owner:w,category:cat,text:t,done:false});inp.value='';loadInts(w);}
-async function togInt(id,w){const items=await sbGet('Interests','owner=eq.'+w);const it=Array.isArray(items)&&items.find(i=>i.id===id);if(it)await sbPatch('Interests',id,{done:!it.done});loadInts(w);}
-async function delInt(id,w){await sbDel('Interests',id);loadInts(w);}
-
-// COURSES
-async function loadCourses(){
-  const items=await sbGet('Courses','');
-  const el=document.getElementById('cgrid');if(!el)return;
-  if(!Array.isArray(items)||!items.length){el.innerHTML='<div class="empty" style="grid-column:1/-1">Liste vide</div>';return;}
-  el.innerHTML=items.map(it=>`<div class="citem"><input type="checkbox" class="ccb" ${it.done?'checked':''} onchange="togC('${it.id}')"/><span class="cnm${it.done?' dn':''}">${it.text}</span><button class="delbtn" onclick="delC('${it.id}')">x</button></div>`).join('');
-}
-async function addCourse(){const inp=document.getElementById('cin');const t=inp.value.trim();if(!t)return;await sbPost('Courses',{text:t,done:false});inp.value='';loadCourses();}
-async function togC(id){const items=await sbGet('Courses','');const it=Array.isArray(items)&&items.find(i=>i.id===id);if(it)await sbPatch('Courses',id,{done:!it.done});loadCourses();}
-async function delC(id){await sbDel('Courses',id);loadCourses();}
-
-// GOOGLE CALENDAR
-let tclient=null,gcWho=null;
-const gcTokens={};
-
-function gcInit(){
-  if(typeof google==='undefined')return;
-  tclient=google.accounts.oauth2.initTokenClient({
-    client_id:GCID,
-    scope:'https://www.googleapis.com/auth/calendar.readonly',
-    callback:async(r)=>{
-      if(r.error)return;
-      gcTokens[gcWho]=r.access_token;
-      localStorage.setItem('gct_'+gcWho,r.access_token);
-      gcSetStatus(gcWho,true);
-      if(gcWho==='duo')await gcLoadCommun(r.access_token);
-      else await gcLoadPerso(gcWho,r.access_token);
-    }
-  });
-}
-
-function gcConnect(who){
-  gcWho=who;
-  if(!tclient)gcInit();
-  if(!tclient){setTimeout(()=>{gcInit();gcConnect(who);},1000);return;}
-  const saved=localStorage.getItem('gct_'+who);
-  if(saved){gcTokens[who]=saved;gcSetStatus(who,true);if(who==='duo')gcLoadCommun(saved);else gcLoadPerso(who,saved);return;}
-  tclient.requestAccessToken({prompt:'consent'});
-}
-
-function gcSetStatus(who,on){
-  const l=document.getElementById('gcl-'+who);
-  const s=document.getElementById('gcs-'+who);
-  if(!l||!s)return;
-  if(on){l.textContent=who==='duo'?'Cal Commun connecte':'Google Calendar connecte';s.textContent='Connecte';s.className='gcst gcon';}
-  else{l.textContent=who==='duo'?'Sync Cal Commun (Google)':'Connecter Google Calendar';s.textContent='Non connecte';s.className='gcst gcoff';}
-}
-
-function fmtT(ev){if(ev.start&&ev.start.dateTime){const d=new Date(ev.start.dateTime);return d.getHours()+'h'+(d.getMinutes()?String(d.getMinutes()).padStart(2,'0'):'00');}return 'Jour';}
-
-async function gcFetch(token,calId,tmin,tmax){
-  const r=await fetch(`https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calId)}/events?timeMin=${tmin}&timeMax=${tmax}&singleEvents=true&orderBy=startTime`,{headers:{'Authorization':'Bearer '+token}});
-  return r.json();
-}
-
-async function gcLoadCommun(token){
-  const el=document.getElementById('gcev-duo');if(!el)return;
-  el.innerHTML='<div class="gcsync">Chargement...</div>';
-  const tmin=new Date(N.getFullYear(),N.getMonth(),N.getDate()).toISOString();
-  const tmax=new Date(N.getFullYear(),N.getMonth(),N.getDate(),23,59,59).toISOString();
-  const tmin2=new Date(N.getFullYear(),N.getMonth(),N.getDate()+1).toISOString();
-  const tmax2=new Date(N.getFullYear(),N.getMonth(),N.getDate()+1,23,59,59).toISOString();
-  try{
-    const cals=await(await fetch('https://www.googleapis.com/calendar/v3/users/me/calendarList',{headers:{'Authorization':'Bearer '+token}})).json();
-    if(cals.error){localStorage.removeItem('gct_duo');gcSetStatus('duo',false);el.innerHTML='';return;}
-    const commun=(cals.items||[]).find(c=>c.summary&&c.summary.toLowerCase().includes('commun'));
-    if(!commun){el.innerHTML='<div class="empty">Agenda "commun" non trouve</div>';return;}
-    el.innerHTML='';
-    const[td,tm]=await Promise.all([gcFetch(token,commun.id,tmin,tmax),gcFetch(token,commun.id,tmin2,tmax2)]);
-    const te=td.items||[],mme=tm.items||[];
-    const tdEl=document.getElementById('gcev-duo-td');
-    const tmEl=document.getElementById('gcev-duo-tm');
-    if(tdEl)tdEl.innerHTML=te.length?te.map(ev=>`<div class="agitem" style="border-color:rgba(200,241,53,.5)"><span class="agtime">${fmtT(ev)}</span><span class="agname">${ev.summary||'Sans titre'}</span><div class="agdot" style="background:var(--duo)"></div></div>`).join(''):'<div class="empty">Aucun event</div>';
-    if(tmEl)tmEl.innerHTML=mme.length?mme.map(ev=>`<div class="agitem" style="border-color:rgba(200,241,53,.5)"><span class="agtime">${fmtT(ev)}</span><span class="agname">${ev.summary||'Sans titre'}</span><div class="agdot" style="background:var(--duo)"></div></div>`).join(''):'<div class="empty">Aucun event</div>';
-  }catch(e){el.innerHTML='<div class="empty">Erreur connexion</div>';}
-}
-
-async function gcLoadPerso(who,token){
-  const tdEl=document.getElementById('gcev-'+who+'-td');
-  const tmEl=document.getElementById('gcev-'+who+'-tm');
-  const cnt=document.getElementById('agcnt-'+who);
-  if(tdEl)tdEl.innerHTML='<div class="gcsync">Chargement...</div>';
-  const tmin=new Date(N.getFullYear(),N.getMonth(),N.getDate()).toISOString();
-  const tmax=new Date(N.getFullYear(),N.getMonth(),N.getDate(),23,59,59).toISOString();
-  const tmin2=new Date(N.getFullYear(),N.getMonth(),N.getDate()+1).toISOString();
-  const tmax2=new Date(N.getFullYear(),N.getMonth(),N.getDate()+1,23,59,59).toISOString();
-  const col=who==='moon'?'var(--pk)':'var(--cy)';
-  try{
-    const cals=await(await fetch('https://www.googleapis.com/calendar/v3/users/me/calendarList',{headers:{'Authorization':'Bearer '+token}})).json();
-    if(cals.error){localStorage.removeItem('gct_'+who);gcSetStatus(who,false);return;}
-    let tdEvs=[],tmEvs=[];
-    for(const cal of(cals.items||[])){
-      // Exclure le Cal commun des vues perso
-      if(cal.summary&&cal.summary.toLowerCase().includes('commun'))continue;
-      try{
-        const[td,tm]=await Promise.all([gcFetch(token,cal.id,tmin,tmax),gcFetch(token,cal.id,tmin2,tmax2)]);
-        if(td.items)tdEvs=tdEvs.concat(td.items);
-        if(tm.items)tmEvs=tmEvs.concat(tm.items);
-      }catch(e){}
-    }
-    const dedup=evs=>{const seen=new Set();return evs.filter(e=>{if(seen.has(e.id))return false;seen.add(e.id);return true;}).sort((a,b)=>(a.start.dateTime||a.start.date||'').localeCompare(b.start.dateTime||b.start.date||''));};
-    tdEvs=dedup(tdEvs);tmEvs=dedup(tmEvs);
-    if(tdEl)tdEl.innerHTML=tdEvs.length===0?'<div class="empty">Aucun evenement</div>':tdEvs.map(ev=>`<div class="agitem"><span class="agtime">${fmtT(ev)}</span><span class="agname">${ev.summary||'Sans titre'}</span><div class="agdot" style="background:${col}"></div></div>`).join('');
-    if(tmEl)tmEl.innerHTML=tmEvs.length===0?'<div class="empty">Aucun evenement</div>':tmEvs.map(ev=>`<div class="agitem"><span class="agtime">${fmtT(ev)}</span><span class="agname">${ev.summary||'Sans titre'}</span><div class="agdot" style="background:${col}"></div></div>`).join('');
-    if(cnt)cnt.textContent=tdEvs.length+' rdv';
-  }catch(e){if(tdEl)tdEl.innerHTML='<div class="empty">Erreur connexion</div>';}
-}
-
-// PIN & NOTES SECRETES
-let pinWho=null,pinVal='';
-function getPin(w){return localStorage.getItem('pin_'+w)||(w==='moon'?'1989':'2007');}
-function openPin(w){pinWho=w;pinVal='';updDots();document.getElementById('pintitle').textContent=w==='moon'?'Note secrete Moon':'Note secrete Oli';document.getElementById('pinerr').style.display='none';document.getElementById('pinlay').classList.add('sh');}
-function closePin(){document.getElementById('pinlay').classList.remove('sh');pinWho=null;pinVal='';}
-function pk(n){if(!n||pinVal.length>=4)return;pinVal+=n;updDots();if(pinVal.length===4)setTimeout(checkPin,200);}
-function pdel(){pinVal=pinVal.slice(0,-1);updDots();}
-function updDots(){for(let i=0;i<4;i++)document.getElementById('pd'+i).classList.toggle('fi',i<pinVal.length);}
-function checkPin(){
-  if(pinVal===getPin(pinWho)){
-    closePin();
-    document.getElementById('ssec-'+pinWho).classList.add('sh');
-    document.getElementById('sbtn-'+pinWho).style.display='none';
-    loadSecTodos(pinWho);
-  }else{document.getElementById('pinerr').style.display='block';pinVal='';updDots();}
-}
-function lockSec(w){document.getElementById('ssec-'+w).classList.remove('sh');document.getElementById('sbtn-'+w).style.display='block';}
-function getSecTodos(w){try{return JSON.parse(localStorage.getItem('sec_'+w)||'[]');}catch{return[];}}
-function saveSecTodos(w,d){localStorage.setItem('sec_'+w,JSON.stringify(d));}
-function loadSecTodos(w){
-  const items=getSecTodos(w);
-  const el=document.getElementById('stodos-'+w);
-  if(!el){console.warn('stodos-'+w+' not found');return;}
-  if(!items.length){el.innerHTML='<div class="empty">Aucune note secrete</div>';return;}
-  el.innerHTML=items.map((it,i)=>`<div class="titem"><input type="checkbox" class="tcb" ${it.done?'checked':''} onchange="togSec('${w}',${i})"/><span class="ttxt${it.done?' dn':''}">${it.text}</span><button class="delbtn" onclick="delSec('${w}',${i})">x</button></div>`).join('');
-}
-function addSecTodo(w){
-  const inp=document.getElementById('sin-'+w);
-  if(!inp)return;
-  const t=inp.value.trim();
-  if(!t)return;
-  const items=getSecTodos(w);
-  items.push({text:t,done:false});
-  saveSecTodos(w,items);
-  inp.value='';
-  loadSecTodos(w);
-}
-
-function togSec(w,i){const items=getSecTodos(w);items[i].done=!items[i].done;saveSecTodos(w,items);loadSecTodos(w);}
-function delSec(w,i){const items=getSecTodos(w);items.splice(i,1);saveSecTodos(w,items);loadSecTodos(w);}
-
-// INIT
-window.addEventListener('load',()=>{
-  setTimeout(gcInit,1000);
-  ['moon','oli','duo'].forEach(w=>{
-    const t=localStorage.getItem('gct_'+w);
-    if(t){gcTokens[w]=t;gcSetStatus(w,true);if(w==='duo')gcLoadCommun(t);else gcLoadPerso(w,t);}
-  });
-});
-
-function loadAll(){
-  ['duo','moon','oli'].forEach(w=>{loadTodos(w);loadInts(w);});
-  loadCourses();
-  renderCtx();
-}
-
-// Gestion de l'auth
-supa.auth.onAuthStateChange((event, session) => {
-  if(session){
-    showApp();
-    if(event==='SIGNED_IN'||event==='TOKEN_REFRESHED'||event==='INITIAL_SESSION'){
-      loadAll();
-    }
+supa.auth.onAuthStateChange((event,s)=>{
+  if(s&&(event==='SIGNED_IN'||event==='TOKEN_REFRESHED'||event==='INITIAL_SESSION')){
+    showApp();loadAll();
+  } else if(!s){
+    document.getElementById('auth').style.display='flex';
   }
 });
 
