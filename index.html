@@ -144,6 +144,15 @@ body{font-family:-apple-system,system-ui,sans-serif;min-height:100vh;transition:
 .sechd{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
 .sectitle{font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.08em}
 .seclock{font-size:11px;font-weight:900;padding:3px 8px;border-radius:20px;border:var(--bd);cursor:pointer;background:none}
+
+@keyframes pop{0%{transform:scale(1)}50%{transform:scale(1.15)}100%{transform:scale(1)}}
+@keyframes fadecheck{0%{opacity:0;transform:translateY(4px)}100%{opacity:1;transform:translateY(0)}}
+@keyframes saved{0%{opacity:0;transform:translateY(-8px)}20%{opacity:1;transform:translateY(0)}80%{opacity:1;transform:translateY(0)}100%{opacity:0;transform:translateY(-8px)}}
+.saved-toast{position:fixed;top:16px;left:50%;transform:translateX(-50%);background:#1a1a1a;color:#C8F135;font-size:12px;font-weight:900;padding:8px 16px;border-radius:20px;border:2px solid #C8F135;z-index:9997;pointer-events:none;animation:saved 1.5s ease forwards;white-space:nowrap}
+.tcb:checked{animation:pop .2s ease}
+.titem.new-item{animation:fadecheck .25s ease}
+.citem.new-item{animation:fadecheck .25s ease}
+.intitem.new-item{animation:fadecheck .25s ease}
 </style>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI5NiIgaGVpZ2h0PSI5NiIgdmlld0JveD0iMCAwIDk2IDk2Ij48cmVjdCB3aWR0aD0iOTYiIGhlaWdodD0iOTYiIHJ4PSIyMiIgZmlsbD0iI0M4RjEzNSIvPjxyZWN0IHg9IjIiIHk9IjIiIHdpZHRoPSI5MiIgaGVpZ2h0PSI5MiIgcng9IjIwIiBmaWxsPSJub25lIiBzdHJva2U9IiMxYTFhMWEiIHN0cm9rZS13aWR0aD0iMyIvPjx0ZXh0IHg9IjQ4IiB5PSI2MiIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZm9udC1mYW1pbHk9InN5c3RlbS11aSxzYW5zLXNlcmlmIiBmb250LXNpemU9IjUyIiBmb250LXdlaWdodD0iOTAwIiBmaWxsPSIjMWExYTFhIj5CITwvdGV4dD48L3N2Zz4="/>
 <link rel="apple-touch-icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI5NiIgaGVpZ2h0PSI5NiIgdmlld0JveD0iMCAwIDk2IDk2Ij48cmVjdCB3aWR0aD0iOTYiIGhlaWdodD0iOTYiIHJ4PSIyMiIgZmlsbD0iI0M4RjEzNSIvPjxyZWN0IHg9IjIiIHk9IjIiIHdpZHRoPSI5MiIgaGVpZ2h0PSI5MiIgcng9IjIwIiBmaWxsPSJub25lIiBzdHJva2U9IiMxYTFhMWEiIHN0cm9rZS13aWR0aD0iMyIvPjx0ZXh0IHg9IjQ4IiB5PSI2MiIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZm9udC1mYW1pbHk9InN5c3RlbS11aSxzYW5zLXNlcmlmIiBmb250LXNpemU9IjUyIiBmb250LXdlaWdodD0iOTAwIiBmaWxsPSIjMWExYTFhIj5CITwvdGV4dD48L3N2Zz4="/>
@@ -303,6 +312,15 @@ const SURL='https://lrjiliaoxbotbftdrexi.supabase.co';
 const SKEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxyamlsaWFveGJvdGJmdGRyZXhpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY4NjE1MDAsImV4cCI6MjA5MjQzNzUwMH0.5D8_pOBPEB6fsmZ1mYu40ACg6Z_rF3ZN99dTZzC0Lbo';
 const GCID='503034230066-km2gpsoimvn2j1ud1rgbs4fn9mfmc8je.apps.googleusercontent.com';
 const supa=supabase.createClient(SURL,SKEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
+
+
+function showToast(msg){
+  const t=document.createElement('div');
+  t.className='saved-toast';
+  t.textContent=msg||'Sauvegarde !';
+  document.body.appendChild(t);
+  setTimeout(()=>t.remove(),1500);
+}
 
 // DB
 async function sbGet(t,f){
@@ -551,8 +569,8 @@ function addCat(w){const inp=document.getElementById('nc-'+w);const n=inp.value.
 function delCat(w,ci){const c=getCats(w);c.splice(ci,1);saveCats(w,c);loadTodos(w);}
 function addSub(w,ci){const inp=document.getElementById(`sa_${w}_${ci}`);const n=inp.value.trim();if(!n)return;const c=getCats(w);c[ci].subs.push({id:'s'+Date.now(),name:n,open:true});saveCats(w,c);inp.value='';loadTodos(w);}
 function delSub(w,ci,si){const c=getCats(w);c[ci].subs.splice(si,1);saveCats(w,c);loadTodos(w);}
-async function addTodo(w,cat,sub,ci,si){const inp=document.getElementById(`ia_${w}_${ci}_${si}`);const t=inp.value.trim();if(!t)return;await sbPost('To do',{owner:w,category:cat,subcategory:sub,text:t,done:false});inp.value='';loadTodos(w);}
-async function togTodo(id,w){const items=await sbGet('To do','owner=eq.'+w);const it=items.find(i=>i.id===id);if(it)await sbPatch('To do',id,{done:!it.done});loadTodos(w);}
+async function addTodo(w,cat,sub,ci,si){const inp=document.getElementById(`ia_${w}_${ci}_${si}`);const t=inp.value.trim();if(!t)return;await sbPost('To do',{owner:w,category:cat,subcategory:sub,text:t,done:false});inp.value='';showToast('Tache ajoutee !');loadTodos(w);}
+async function togTodo(id,w){const items=await sbGet('To do','owner=eq.'+w);const it=items.find(i=>i.id===id);if(it){await sbPatch('To do',id,{done:!it.done});if(!it.done)showToast('Tache terminee ! ');}loadTodos(w);}
 async function delTodo(id,w){await sbDel('To do',id);loadTodos(w);}
 
 // INTERESTS
@@ -580,7 +598,7 @@ async function loadInts(w){
 }
 function addIntCat(w){const inp=document.getElementById('ni-'+w);const n=inp.value.trim();if(!n)return;const c=getInts(w);c.push({id:'i'+Date.now(),name:n});saveInts(w,c);inp.value='';loadInts(w);}
 function delIntCat(w,ci){const c=getInts(w);c.splice(ci,1);saveInts(w,c);loadInts(w);}
-async function addInt(w,cat,ci){const inp=document.getElementById(`ii_${w}_${ci}`);const t=inp.value.trim();if(!t)return;await sbPost('Interests',{owner:w,category:cat,text:t,done:false});inp.value='';loadInts(w);}
+async function addInt(w,cat,ci){const inp=document.getElementById(`ii_${w}_${ci}`);const t=inp.value.trim();if(!t)return;await sbPost('Interests',{owner:w,category:cat,text:t,done:false});inp.value='';showToast('Ajoute !');loadInts(w);}
 async function togInt(id,w){const items=await sbGet('Interests','owner=eq.'+w);const it=items.find(i=>i.id===id);if(it)await sbPatch('Interests',id,{done:!it.done});loadInts(w);}
 async function delInt(id,w){await sbDel('Interests',id);loadInts(w);}
 
@@ -591,7 +609,7 @@ async function loadCourses(){
   if(!items.length){el.innerHTML='<div class="empty" style="grid-column:1/-1">Liste vide</div>';return;}
   el.innerHTML=items.map(it=>`<div class="citem"><input type="checkbox" class="ccb" ${it.done?'checked':''} onchange="togC('${it.id}')"/><span class="cnm${it.done?' dn':''}">${it.text}</span><button class="delbtn" onclick="delC('${it.id}')">x</button></div>`).join('');
 }
-async function addCourse(){const inp=document.getElementById('cin');const t=inp.value.trim();if(!t)return;await sbPost('Courses',{text:t,done:false});inp.value='';loadCourses();}
+async function addCourse(){const inp=document.getElementById('cin');const t=inp.value.trim();if(!t)return;await sbPost('Courses',{text:t,done:false});inp.value='';showToast('Article ajoute !');loadCourses();}
 async function togC(id){const items=await sbGet('Courses','');const it=items.find(i=>i.id===id);if(it)await sbPatch('Courses',id,{done:!it.done});loadCourses();}
 async function delC(id){await sbDel('Courses',id);loadCourses();}
 
@@ -717,7 +735,7 @@ function loadSecTodos(w){
     ?'<div class="empty">Aucune note secrete</div>'
     :items.map((it,i)=>`<div class="titem"><input type="checkbox" class="tcb" ${it.done?'checked':''} onchange="togSec('${w}',${i})"/><span class="ttxt${it.done?' dn':''}">${it.text}</span><button class="delbtn" onclick="delSec('${w}',${i})">x</button></div>`).join('');
 }
-function addSecTodo(w){const inp=document.getElementById('sin-'+w);const t=inp.value.trim();if(!t)return;const items=getSecTodos(w);items.push({text:t,done:false});saveSecTodos(w,items);inp.value='';loadSecTodos(w);}
+function addSecTodo(w){const inp=document.getElementById('sin-'+w);const t=inp.value.trim();if(!t)return;const items=getSecTodos(w);items.push({text:t,done:false});saveSecTodos(w,items);inp.value='';showToast('Note ajoutee !');loadSecTodos(w);}
 function togSec(w,i){const items=getSecTodos(w);items[i].done=!items[i].done;saveSecTodos(w,items);loadSecTodos(w);}
 function delSec(w,i){const items=getSecTodos(w);items.splice(i,1);saveSecTodos(w,items);loadSecTodos(w);}
 
