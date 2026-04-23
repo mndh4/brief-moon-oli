@@ -444,24 +444,13 @@ async function sendLink(){
 async function signOut(){await supa.auth.signOut();document.getElementById('auth').style.display='flex';}
 function showApp(){document.getElementById('auth').style.display='none';}
 async function checkAuth(){
-  // Laisser le temps au client de traiter le token dans l'URL
-  await new Promise(r=>setTimeout(r,500));
   const{data:{session}}=await supa.auth.getSession();
-  if(session){
-    showApp();
-  } else {
-    document.getElementById('auth').style.display='flex';
-  }
+  if(session){showApp();}
+  else{document.getElementById('auth').style.display='flex';}
 }
 supa.auth.onAuthStateChange((event,s)=>{
-  if(s){
+  if(s && event==='SIGNED_IN'){
     showApp();
-    // Charger les données si c'est une nouvelle connexion via magic link
-    if(event==='SIGNED_IN'){
-      loadTodos('duo');loadTodos('moon');loadTodos('oli');
-      loadInts('duo');loadInts('moon');loadInts('oli');
-      loadCourses();
-    }
   }
 });
 
@@ -789,37 +778,48 @@ window.addEventListener('load',()=>{
   });
 });
 
-async function init(){
-  // Si l'URL contient un token magic link, laisser Supabase le traiter
-  const hash = window.location.hash;
-  if(hash && hash.includes('access_token')){
-    // Supabase va déclencher onAuthStateChange automatiquement
-    // On attend qu'il le fasse
-    await new Promise(resolve => {
-      const unsub = supa.auth.onAuthStateChange((event, session) => {
-        if(session){
-          showApp();
-          loadTodos('duo');loadTodos('moon');loadTodos('oli');
-          loadInts('duo');loadInts('moon');loadInts('oli');
-          loadCourses();
-          renderCtx();
-          // Nettoyer l'URL
-          window.history.replaceState({}, document.title, window.location.pathname);
-          resolve();
-        }
-      });
-      // Timeout de secours après 3 secondes
-      setTimeout(()=>{
-        resolve();
-        checkAuth();
-      }, 3000);
-    });
-    return;
-  }
-  await checkAuth();
+function loadAll(){
   ['duo','moon','oli'].forEach(w=>{loadTodos(w);loadInts(w);});
   loadCourses();
   renderCtx();
+}
+
+async function init(){
+  const url = window.location.href;
+  const hash = window.location.hash;
+  const search = window.location.search;
+
+  // Cas 1 : lien magique format PKCE (?code=xxx)
+  if(search.includes('code=')){
+    const{data,error} = await supa.auth.exchangeCodeForSession(search);
+    if(!error && data.session){
+      window.history.replaceState({},document.title,window.location.pathname);
+      showApp();
+      loadAll();
+      return;
+    }
+  }
+
+  // Cas 2 : ancien format (#access_token=xxx)
+  if(hash.includes('access_token')){
+    await new Promise(r=>setTimeout(r,800));
+    const{data:{session}} = await supa.auth.getSession();
+    if(session){
+      window.history.replaceState({},document.title,window.location.pathname);
+      showApp();
+      loadAll();
+      return;
+    }
+  }
+
+  // Cas 3 : session existante
+  const{data:{session}} = await supa.auth.getSession();
+  if(session){
+    showApp();
+    loadAll();
+  } else {
+    document.getElementById('auth').style.display='flex';
+  }
 }
 init();
 </script>
