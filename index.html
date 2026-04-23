@@ -302,7 +302,7 @@ const supa=supabase.createClient(SURL,SKEY,{auth:{persistSession:true,autoRefres
 
 // DB
 async function sbGet(t,f){
-  let q=supa.from(t).select('*').order('created_at',{ascending:true});
+  let q=supa.from(t).select('*');
   if(f){const m=f.match(/^([a-z_]+)=eq\.(.+)$/);if(m)q=q.eq(m[1],m[2]);}
   const{data,error}=await q;
   if(error){console.warn('GET',t,error.message);return[];}
