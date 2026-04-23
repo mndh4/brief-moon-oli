@@ -394,20 +394,16 @@ async function fetchCtxEvents(tmin,tmax,tok,calId){
 }
 
 async function loadCtxEvents(tmin,tmax){
-  // Charger depuis tous les tokens disponibles
-  for(const who of['moon','oli','duo']){
-    const tok=localStorage.getItem('gct_'+who);
-    if(!tok)continue;
-    try{
-      const cals=await(await fetch('https://www.googleapis.com/calendar/v3/users/me/calendarList',{headers:{'Authorization':'Bearer '+tok}})).json();
-      if(cals.error)continue;
-      for(const cal of(cals.items||[])){
-        if(who!=='duo'&&cal.summary&&cal.summary.toLowerCase().includes('commun'))continue;
-        if(who==='duo'&&cal.summary&&!cal.summary.toLowerCase().includes('commun'))continue;
-        await fetchCtxEvents(tmin,tmax,tok,cal.id);
-      }
-    }catch(e){}
-  }
+  // Charger UNIQUEMENT le Cal Commun pour la vue contextuelle
+  const tok=localStorage.getItem('gct_duo')||localStorage.getItem('gct_moon')||localStorage.getItem('gct_oli');
+  if(!tok)return;
+  try{
+    const cals=await(await fetch('https://www.googleapis.com/calendar/v3/users/me/calendarList',{headers:{'Authorization':'Bearer '+tok}})).json();
+    if(cals.error)return;
+    const commun=(cals.items||[]).find(c=>c.summary&&c.summary.toLowerCase().includes('commun'));
+    if(!commun)return;
+    await fetchCtxEvents(tmin,tmax,tok,commun.id);
+  }catch(e){}
 }
 
 async function renderCtx(){
@@ -684,18 +680,28 @@ function updDots(){for(let i=0;i<4;i++)document.getElementById('pd'+i).classList
 function checkPin(){
   if(pinVal===getPin(pinWho)){
     closePin();
-    document.getElementById('ssec-'+pinWho).classList.add('sh');
-    document.getElementById('sbtn-'+pinWho).style.display='none';
-    loadSecTodos(pinWho);
-  }else{document.getElementById('pinerr').style.display='block';pinVal='';updDots();}
+    const sec=document.getElementById('ssec-'+pinWho);
+    const btn=document.getElementById('sbtn-'+pinWho);
+    if(sec)sec.classList.add('sh');
+    if(btn)btn.style.display='none';
+    // Petit délai pour laisser le DOM se mettre à jour
+    setTimeout(()=>loadSecTodos(pinWho),50);
+  }else{
+    document.getElementById('pinerr').style.display='block';
+    pinVal='';updDots();
+  }
 }
 function lockSec(w){document.getElementById('ssec-'+w).classList.remove('sh');document.getElementById('sbtn-'+w).style.display='block';}
 function getSecTodos(w){try{return JSON.parse(localStorage.getItem('sec_'+w)||'[]');}catch{return[];}}
 function saveSecTodos(w,d){localStorage.setItem('sec_'+w,JSON.stringify(d));}
 function loadSecTodos(w){
   const items=getSecTodos(w);
-  const el=document.getElementById('stodos-'+w);if(!el)return;
-  el.innerHTML=items.length===0?'<div class="empty">Aucune note</div>':items.map((it,i)=>`<div class="titem"><input type="checkbox" class="tcb" ${it.done?'checked':''} onchange="togSec('${w}',${i})"/><span class="ttxt${it.done?' dn':''}">${it.text}</span><button class="delbtn" onclick="delSec('${w}',${i})">x</button></div>`).join('');
+  const el=document.getElementById('stodos-'+w);
+  if(!el){console.warn('stodos-'+w+' non trouve');return;}
+  console.log('loadSecTodos',w,'items:',items.length);
+  el.innerHTML=items.length===0
+    ?'<div class="empty">Aucune note secrete</div>'
+    :items.map((it,i)=>`<div class="titem"><input type="checkbox" class="tcb" ${it.done?'checked':''} onchange="togSec('${w}',${i})"/><span class="ttxt${it.done?' dn':''}">${it.text}</span><button class="delbtn" onclick="delSec('${w}',${i})">x</button></div>`).join('');
 }
 function addSecTodo(w){const inp=document.getElementById('sin-'+w);const t=inp.value.trim();if(!t)return;const items=getSecTodos(w);items.push({text:t,done:false});saveSecTodos(w,items);inp.value='';loadSecTodos(w);}
 function togSec(w,i){const items=getSecTodos(w);items[i].done=!items[i].done;saveSecTodos(w,items);loadSecTodos(w);}
