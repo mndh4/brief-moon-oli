@@ -679,13 +679,13 @@ function pdel(){pinVal=pinVal.slice(0,-1);updDots();}
 function updDots(){for(let i=0;i<4;i++)document.getElementById('pd'+i).classList.toggle('fi',i<pinVal.length);}
 function checkPin(){
   if(pinVal===getPin(pinWho)){
+    const who=pinWho; // Sauvegarder avant closePin() qui remet pinWho à null
     closePin();
-    const sec=document.getElementById('ssec-'+pinWho);
-    const btn=document.getElementById('sbtn-'+pinWho);
+    const sec=document.getElementById('ssec-'+who);
+    const btn=document.getElementById('sbtn-'+who);
     if(sec)sec.classList.add('sh');
     if(btn)btn.style.display='none';
-    // Petit délai pour laisser le DOM se mettre à jour
-    setTimeout(()=>loadSecTodos(pinWho),50);
+    setTimeout(()=>loadSecTodos(who),50);
   }else{
     document.getElementById('pinerr').style.display='block';
     pinVal='';updDots();
