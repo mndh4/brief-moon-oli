@@ -258,18 +258,24 @@ body{background:var(--bg-duo);font-family:-apple-system,'Inter',system-ui,sans-s
   <div id="view-duo">
     <div class="sec-label">Agenda commun</div>
     <div class="card" id="ag-card">
+      <button class="gcal-btn" onclick="connectGCalCommun()">
+        <svg width="16" height="16" viewBox="0 0 48 48"><rect width="48" height="48" rx="4" fill="#fff"/><path d="M35 35H13V13h22v22z" fill="#1a73e8" opacity=".1"/><path d="M29 19H19v10h10V19z" fill="#ea4335"/><text x="24" y="43" text-anchor="middle" font-size="12" font-weight="900" fill="#1a73e8" font-family="sans-serif">31</text></svg>
+        <span id="gcal-commun-label">Sync Cal Commun (Google)</span>
+        <span class="gcal-status gcal-disconnected" id="gcal-commun-status">Non connecté</span>
+      </button>
+      <div id="gcal-commun-events"></div>
       <div class="ag-day-row"><span class="ag-day-lbl">Aujourd'hui</span><span class="ag-count" id="ag-today-count" style="background:var(--yellow)">0 rdv</span></div>
       <div id="ag-today-list"></div>
       <div class="ag-day-row" style="margin-top:10px;margin-bottom:8px"><span class="ag-day-lbl">Demain</span></div>
       <div id="ag-tomorrow-list"></div>
-      <div class="add-row">
-        <input class="add-input" id="ag-time-in" placeholder="18h00" style="flex:0 0 60px"/>
-        <input class="add-input" id="ag-name-in" placeholder="Événement..."/>
-        <select id="ag-day-sel" style="border:var(--border);border-radius:var(--radius-sm);padding:0 6px;font-size:11px;font-weight:800;background:var(--white);color:var(--black);cursor:pointer">
+      <div style="display:flex;gap:5px;margin-top:10px;flex-wrap:nowrap;align-items:center">
+        <input class="add-input" id="ag-time-in" placeholder="18h00" style="flex:0 0 52px;padding:7px 6px;font-size:11px"/>
+        <input class="add-input" id="ag-name-in" placeholder="Événement..." style="flex:1;min-width:0;padding:7px 8px;font-size:11px"/>
+        <select id="ag-day-sel" style="flex:0 0 44px;border:var(--border);border-radius:var(--radius-sm);padding:7px 3px;font-size:10px;font-weight:800;background:var(--white);color:var(--black);cursor:pointer">
           <option value="today">Auj.</option>
           <option value="tomorrow">Dem.</option>
         </select>
-        <button class="add-btn" id="ag-add-btn" onclick="addEvent()" style="color:var(--bg-duo)">+</button>
+        <button style="flex:0 0 32px;background:var(--black);color:var(--bg-duo);border:var(--border);border-radius:var(--radius-sm);padding:7px;font-size:16px;font-weight:900;cursor:pointer;box-shadow:var(--shadow)" onclick="addEvent()">+</button>
       </div>
     </div>
 
@@ -444,6 +450,60 @@ function initGoogleClient(){
   });
 }
 
+
+function connectGCalCommun(){
+  currentGCalWho = 'commun';
+  if(!tokenClient) initGoogleClient();
+  if(!tokenClient){ alert('Google API non chargée, réessaie'); return; }
+  const saved = localStorage.getItem('gcal_token_commun');
+  if(saved){ updateGCalCommunStatus(true); fetchCommunCalEvents(saved); return; }
+  tokenClient.callback = async (resp) => {
+    if(resp.error) return;
+    localStorage.setItem('gcal_token_commun', resp.access_token);
+    updateGCalCommunStatus(true);
+    fetchCommunCalEvents(resp.access_token);
+  };
+  tokenClient.requestAccessToken({ prompt: 'consent' });
+}
+
+function updateGCalCommunStatus(connected){
+  const label = document.getElementById('gcal-commun-label');
+  const status = document.getElementById('gcal-commun-status');
+  if(!label||!status) return;
+  if(connected){ label.textContent='Cal Commun connecté'; status.textContent='Connecté'; status.className='gcal-status gcal-connected'; }
+  else { label.textContent='Sync Cal Commun (Google)'; status.textContent='Non connecté'; status.className='gcal-status gcal-disconnected'; }
+}
+
+async function fetchCommunCalEvents(token){
+  const el = document.getElementById('gcal-commun-events');
+  if(!el) return;
+  el.innerHTML = '<div class="gcal-syncing">Chargement Cal Commun...</div>';
+  const now = new Date();
+  const todayStart = new Date(now.getFullYear(),now.getMonth(),now.getDate()).toISOString();
+  const todayEnd = new Date(now.getFullYear(),now.getMonth(),now.getDate(),23,59,59).toISOString();
+  const tomStart = new Date(now.getFullYear(),now.getMonth(),now.getDate()+1).toISOString();
+  const tomEnd = new Date(now.getFullYear(),now.getMonth(),now.getDate()+1,23,59,59).toISOString();
+  try {
+    const calsResp = await fetch('https://www.googleapis.com/calendar/v3/users/me/calendarList', { headers:{'Authorization':'Bearer '+token} });
+    const calsData = await calsResp.json();
+    if(calsData.error){ localStorage.removeItem('gcal_token_commun'); updateGCalCommunStatus(false); el.innerHTML=''; return; }
+    const communCal = (calsData.items||[]).find(c => c.summary && c.summary.toLowerCase().includes('commun'));
+    if(!communCal){ el.innerHTML='<div class="empty">Agenda "Cal commun" non trouvé</div>'; return; }
+    const [todayR, tomR] = await Promise.all([
+      fetch(`https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(communCal.id)}/events?timeMin=${todayStart}&timeMax=${todayEnd}&singleEvents=true&orderBy=startTime`, {headers:{'Authorization':'Bearer '+token}}),
+      fetch(`https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(communCal.id)}/events?timeMin=${tomStart}&timeMax=${tomEnd}&singleEvents=true&orderBy=startTime`, {headers:{'Authorization':'Bearer '+token}})
+    ]);
+    const [td, tm] = await Promise.all([todayR.json(), tomR.json()]);
+    const fmtTime = (ev) => { if(ev.start?.dateTime){ const d=new Date(ev.start.dateTime); return d.getHours()+'h'+(d.getMinutes()?String(d.getMinutes()).padStart(2,'0'):'00'); } return 'Jour'; };
+    const todayEvs = td.items||[], tomEvs = tm.items||[];
+    let html = '';
+    if(todayEvs.length){ html += '<div class="ag-day-row" style="margin-bottom:6px"><span class="ag-day-lbl">Cal Commun — Aujourd'hui</span></div>'; html += todayEvs.map(ev=>`<div class="ag-item" style="border-color:rgba(200,241,53,.4)"><span class="ag-time">${fmtTime(ev)}</span><span class="ag-name">${ev.summary||'Sans titre'}</span><div class="ag-dot" style="background:var(--bg-duo)"></div></div>`).join(''); }
+    if(tomEvs.length){ html += '<div class="ag-day-row" style="margin:8px 0 6px"><span class="ag-day-lbl">Cal Commun — Demain</span></div>'; html += tomEvs.map(ev=>`<div class="ag-item" style="border-color:rgba(200,241,53,.4)"><span class="ag-time">${fmtTime(ev)}</span><span class="ag-name">${ev.summary||'Sans titre'}</span><div class="ag-dot" style="background:var(--bg-duo)"></div></div>`).join(''); }
+    if(!todayEvs.length && !tomEvs.length) html = '<div class="empty">Aucun événement dans Cal Commun</div>';
+    el.innerHTML = html + '<div style="height:8px"></div>';
+  } catch(e){ el.innerHTML='<div class="empty">Erreur connexion Google</div>'; }
+}
+
 function connectGCal(who){
   currentGCalWho = who;
   if(!tokenClient) initGoogleClient();
@@ -551,6 +611,8 @@ function initSavedGCalTokens(){
     const saved = localStorage.getItem('gcal_token_'+who);
     if(saved){ gcalTokens[who]=saved; updateGCalStatus(who,true); fetchCalendarEvents(who); }
   });
+  const communSaved = localStorage.getItem('gcal_token_commun');
+  if(communSaved){ updateGCalCommunStatus(true); fetchCommunCalEvents(communSaved); }
 }
 
 // Init Google client quand l'API est chargée
@@ -727,13 +789,19 @@ function renderCtxView(){
   if(ctxMode === 'weekend'){
     const fri = new Date(now); fri.setDate(dom + (5-dow+7)%7);
     [fri, new Date(fri.getTime()+86400000), new Date(fri.getTime()+172800000)].forEach(d => {
-      html += `<div class="ctx-cell"><div class="ctx-cell-day">${days[d.getDay()]}</div><div class="ctx-cell-date">${d.getDate()} ${months[d.getMonth()]}</div><div class="ctx-cell-note">Aucun rdv</div></div>`;
+      const dayStr = d.toISOString().split('T')[0];
+      const dayItems = (gd('ctx_events_'+dayStr)||[]);
+      const evNote = dayItems.length > 0 ? dayItems.map(e=>e.time+' '+e.name).join(', ') : 'Aucun rdv';
+      html += `<div class="ctx-cell"><div class="ctx-cell-day">${days[d.getDay()]}</div><div class="ctx-cell-date">${d.getDate()} ${months[d.getMonth()]}</div><div class="ctx-cell-note">${evNote}</div></div>`;
     });
     el.innerHTML = `<div class="ctx-view-title">Ce weekend</div><div class="ctx-grid">${html}</div>`;
   } else if(ctxMode === 'week'){
     const mon = new Date(now); mon.setDate(dom + (1-dow+7)%7);
     for(let i=0;i<7;i++){ const d=new Date(mon); d.setDate(mon.getDate()+i);
-      html += `<div class="ctx-cell"><div class="ctx-cell-day">${days[d.getDay()]}</div><div class="ctx-cell-date">${d.getDate()} ${months[d.getMonth()]}</div><div class="ctx-cell-note">Aucun rdv</div></div>`;
+      const dayStr = d.toISOString().split('T')[0];
+      const dayItems = (gd('ctx_events_'+dayStr)||[]);
+      const evNote = dayItems.length > 0 ? dayItems.map(e=>e.time+' '+e.name).join(', ') : 'Aucun rdv';
+      html += `<div class="ctx-cell"><div class="ctx-cell-day">${days[d.getDay()]}</div><div class="ctx-cell-date">${d.getDate()} ${months[d.getMonth()]}</div><div class="ctx-cell-note">${evNote}</div></div>`;
     }
     el.innerHTML = `<div class="ctx-view-title">Cette semaine</div><div class="ctx-grid">${html}</div>`;
   } else if(ctxMode === 'month'){
@@ -750,26 +818,38 @@ function renderCtxView(){
 renderCtxView();
 
 // Supabase helper
+function getAuthToken(){
+  try {
+    const session = JSON.parse(localStorage.getItem('sb-lrjiliaoxbotbftdrexi-auth-token') || '{}');
+    return session?.access_token || SUPA_KEY;
+  } catch { return SUPA_KEY; }
+}
 async function sb(table, method='GET', body=null, id=null){
+  const token = getAuthToken();
   const url = `${SUPA_URL}/rest/v1/${table}${id?`?id=eq.${id}`:''}`;
-  const opts = { method, headers: {'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'Content-Type':'application/json','Prefer':method==='POST'?'return=representation':''}};
+  const opts = { method, headers: {'apikey':SUPA_KEY,'Authorization':'Bearer '+token,'Content-Type':'application/json','Prefer':method==='POST'?'return=representation':''}};
   if(body) opts.body = JSON.stringify(body);
   const r = await fetch(url, opts);
   if(r.status===204||r.status===200&&method==='DELETE') return [];
   return r.json();
 }
 async function sbGet(table, filters=''){
-  const r = await fetch(`${SUPA_URL}/rest/v1/${table}?${filters}&order=created_at.asc`, {headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}});
+  const token = getAuthToken();
+  const r = await fetch(`${SUPA_URL}/rest/v1/${table}?${filters}&order=created_at.asc`, {headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+token}});
   return r.json();
 }
 async function sbDel(table, id){
-  await fetch(`${SUPA_URL}/rest/v1/${table}?id=eq.${id}`, {method:'DELETE', headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}});
+  const token = getAuthToken();
+  await fetch(`${SUPA_URL}/rest/v1/${table}?id=eq.${id}`, {method:'DELETE', headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+token}});
 }
 async function sbPatch(table, id, body){
-  await fetch(`${SUPA_URL}/rest/v1/${table}?id=eq.${id}`, {method:'PATCH', headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'Content-Type':'application/json'}, body:JSON.stringify(body)});
+  const token = getAuthToken();
+  await fetch(`${SUPA_URL}/rest/v1/${table}?id=eq.${id}`, {method:'PATCH', headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+token,'Content-Type':'application/json'}, body:JSON.stringify(body)});
 }
 
 // AGENDA
+function gd(k){try{const r=localStorage.getItem(k);return r?JSON.parse(r):null}catch{return null}}
+function sd2(k,d){try{localStorage.setItem(k,JSON.stringify(d))}catch{}}
 async function loadAgenda(){
   const items = await sbGet('agenda','');
   const today = items.filter(e=>e.day==='today').sort((a,b)=>a.time.localeCompare(b.time));
