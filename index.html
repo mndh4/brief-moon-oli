@@ -394,15 +394,25 @@ async function fetchCtxEvents(tmin,tmax,tok,calId){
 }
 
 async function loadCtxEvents(tmin,tmax){
-  // Charger UNIQUEMENT le Cal Commun pour la vue contextuelle
-  const tok=localStorage.getItem('gct_duo')||localStorage.getItem('gct_moon')||localStorage.getItem('gct_oli');
+  // Déterminer l'onglet actif
+  const activeTab=['duo','moon','oli'].find(t=>document.getElementById('v'+t).style.display!=='none')||'duo';
+  const tok=localStorage.getItem('gct_'+activeTab)
+    ||(activeTab==='duo'?localStorage.getItem('gct_moon')||localStorage.getItem('gct_oli'):null);
   if(!tok)return;
   try{
     const cals=await(await fetch('https://www.googleapis.com/calendar/v3/users/me/calendarList',{headers:{'Authorization':'Bearer '+tok}})).json();
     if(cals.error)return;
-    const commun=(cals.items||[]).find(c=>c.summary&&c.summary.toLowerCase().includes('commun'));
-    if(!commun)return;
-    await fetchCtxEvents(tmin,tmax,tok,commun.id);
+    if(activeTab==='duo'){
+      // Onglet commun : charger seulement Cal Commun
+      const commun=(cals.items||[]).find(c=>c.summary&&c.summary.toLowerCase().includes('commun'));
+      if(commun)await fetchCtxEvents(tmin,tmax,tok,commun.id);
+    }else{
+      // Onglet perso : charger tous les agendas SAUF Cal Commun
+      for(const cal of(cals.items||[])){
+        if(cal.summary&&cal.summary.toLowerCase().includes('commun'))continue;
+        await fetchCtxEvents(tmin,tmax,tok,cal.id);
+      }
+    }
   }catch(e){}
 }
 
