@@ -369,21 +369,67 @@ function cycleCtx(){
   document.getElementById('ctxsub').textContent=ctxL[ctxM];
   renderCtx();
 }
-function renderCtx(){
+// Cache des events GCal par date
+const gcEvCache={};
+function cacheGcEvs(evs){
+  evs.forEach(ev=>{
+    if(!ev.start)return;
+    const d=new Date(ev.start.dateTime||ev.start.date);
+    const k=d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate();
+    if(!gcEvCache[k])gcEvCache[k]=[];
+    if(!gcEvCache[k].find(e=>e.id===ev.id))gcEvCache[k].push(ev);
+  });
+}
+function getEvForDate(d){
+  const k=d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate();
+  return gcEvCache[k]||[];
+}
+
+async function fetchCtxEvents(tmin,tmax,tok,calId){
+  try{
+    const r=await fetch(`https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calId)}/events?timeMin=${tmin}&timeMax=${tmax}&singleEvents=true&orderBy=startTime`,{headers:{'Authorization':'Bearer '+tok}});
+    const d=await r.json();
+    if(d.items)cacheGcEvs(d.items);
+  }catch(e){}
+}
+
+async function loadCtxEvents(tmin,tmax){
+  // Charger depuis tous les tokens disponibles
+  for(const who of['moon','oli','duo']){
+    const tok=localStorage.getItem('gct_'+who);
+    if(!tok)continue;
+    try{
+      const cals=await(await fetch('https://www.googleapis.com/calendar/v3/users/me/calendarList',{headers:{'Authorization':'Bearer '+tok}})).json();
+      if(cals.error)continue;
+      for(const cal of(cals.items||[])){
+        if(who!=='duo'&&cal.summary&&cal.summary.toLowerCase().includes('commun'))continue;
+        if(who==='duo'&&cal.summary&&!cal.summary.toLowerCase().includes('commun'))continue;
+        await fetchCtxEvents(tmin,tmax,tok,cal.id);
+      }
+    }catch(e){}
+  }
+}
+
+async function renderCtx(){
   const el=document.getElementById('ctxview');
   const tl=document.getElementById('ctxvt');
   const gr=document.getElementById('ctxgr');
   if(ctxM==='day'){el.style.display='none';return;}
   el.style.display='block';
-  let days=[],title='';
+  let days=[],title='',tmin,tmax;
+
   if(ctxM==='weekend'){
     const f=new Date(N);f.setDate(dom+(5-dow+7)%7);
     days=[f,new Date(f.getTime()+86400000),new Date(f.getTime()+172800000)];
     title='Ce weekend';
+    tmin=new Date(f.getFullYear(),f.getMonth(),f.getDate()).toISOString();
+    tmax=new Date(days[2].getFullYear(),days[2].getMonth(),days[2].getDate(),23,59,59).toISOString();
   }else if(ctxM==='week'){
     const m=new Date(N);m.setDate(dom+(1-dow+7)%7);
     days=Array.from({length:7},(_,i)=>{const d=new Date(m);d.setDate(m.getDate()+i);return d;});
     title='Cette semaine';
+    tmin=new Date(m.getFullYear(),m.getMonth(),m.getDate()).toISOString();
+    tmax=new Date(days[6].getFullYear(),days[6].getMonth(),days[6].getDate(),23,59,59).toISOString();
   }else{
     const first=new Date(N.getFullYear(),N.getMonth(),1);
     const last=new Date(N.getFullYear(),N.getMonth()+1,0);
@@ -391,11 +437,29 @@ function renderCtx(){
     while(cur<=last){const s=new Date(cur),e=new Date(cur);e.setDate(cur.getDate()+6);if(e>last)e.setTime(last.getTime());days.push({s,e,w:true});cur.setDate(cur.getDate()+7);}
     title=N.toLocaleDateString('fr-FR',{month:'long',year:'numeric'});
     title=title.charAt(0).toUpperCase()+title.slice(1);
+    tmin=new Date(N.getFullYear(),N.getMonth(),1).toISOString();
+    tmax=last.toISOString();
   }
+
   tl.textContent=title;
+  gr.innerHTML='<div class="ctxcn" style="grid-column:1/-1">Chargement...</div>';
+
+  // Charger les events si on a des tokens
+  const anyTok=['moon','oli','duo'].some(w=>localStorage.getItem('gct_'+w));
+  if(anyTok && tmin && tmax) await loadCtxEvents(tmin,tmax);
+
   gr.innerHTML=days.map(d=>{
-    if(d.w)return`<div class="ctxcell"><div class="ctxcd">Sem.</div><div class="ctxcdt">${d.s.getDate()}-${d.e.getDate()} ${MN[d.e.getMonth()]}</div><div class="ctxcn">Aucun rdv</div></div>`;
-    return`<div class="ctxcell"><div class="ctxcd">${DSH[d.getDay()]}</div><div class="ctxcdt">${d.getDate()} ${MN[d.getMonth()]}</div><div class="ctxcn">Aucun rdv</div></div>`;
+    if(d.w){
+      // Vue mois : agréger les events de la semaine
+      let wEvs=[];
+      let cur=new Date(d.s);
+      while(cur<=d.e){wEvs=wEvs.concat(getEvForDate(cur));cur.setDate(cur.getDate()+1);}
+      const evTxt=wEvs.length>0?wEvs.slice(0,2).map(e=>fmtT(e)+' '+e.summary).join(', ')+(wEvs.length>2?'...':''):'Aucun rdv';
+      return`<div class="ctxcell"><div class="ctxcd">Sem.</div><div class="ctxcdt">${d.s.getDate()}-${d.e.getDate()} ${MN[d.e.getMonth()]}</div><div class="ctxcn">${evTxt}</div></div>`;
+    }
+    const evs=getEvForDate(d);
+    const evTxt=evs.length>0?evs.slice(0,2).map(e=>fmtT(e)+' '+e.summary).join(', ')+(evs.length>2?'...':''):'Aucun rdv';
+    return`<div class="ctxcell"><div class="ctxcd">${DSH[d.getDay()]}</div><div class="ctxcdt">${d.getDate()} ${MN[d.getMonth()]}</div><div class="ctxcn">${evTxt}</div></div>`;
   }).join('');
 }
 
