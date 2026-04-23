@@ -443,8 +443,27 @@ async function sendLink(){
 }
 async function signOut(){await supa.auth.signOut();document.getElementById('auth').style.display='flex';}
 function showApp(){document.getElementById('auth').style.display='none';}
-async function checkAuth(){const{data:{session}}=await supa.auth.getSession();if(session)showApp();else document.getElementById('auth').style.display='flex';}
-supa.auth.onAuthStateChange((_,s)=>{if(s)showApp();});
+async function checkAuth(){
+  // Laisser le temps au client de traiter le token dans l'URL
+  await new Promise(r=>setTimeout(r,500));
+  const{data:{session}}=await supa.auth.getSession();
+  if(session){
+    showApp();
+  } else {
+    document.getElementById('auth').style.display='flex';
+  }
+}
+supa.auth.onAuthStateChange((event,s)=>{
+  if(s){
+    showApp();
+    // Charger les données si c'est une nouvelle connexion via magic link
+    if(event==='SIGNED_IN'){
+      loadTodos('duo');loadTodos('moon');loadTodos('oli');
+      loadInts('duo');loadInts('moon');loadInts('oli');
+      loadCourses();
+    }
+  }
+});
 
 // DATE & CTX
 const N=new Date();
