@@ -473,9 +473,13 @@ async function renderCtx(){
   tl.textContent=title;
   gr.innerHTML='<div class="ctxcn" style="grid-column:1/-1">Chargement...</div>';
 
-  // Charger les events si on a des tokens
-  const anyTok=['moon','oli','duo'].some(w=>localStorage.getItem('gct_'+w));
-  if(anyTok && tmin && tmax) await loadCtxEvents(tmin,tmax);
+  // Charger les events seulement si token valide pour cet onglet
+  const tabTok=localStorage.getItem('gct_'+activeTab);
+  const tabTime=parseInt(localStorage.getItem('gct_time_'+activeTab)||'0');
+  const tabExpired=Date.now()-tabTime>55*60*1000;
+  if(tabTok && !tabExpired && tmin && tmax){
+    await loadCtxEvents(tmin,tmax);
+  }
 
   gr.innerHTML=days.map(d=>{
     if(d.w){
@@ -503,6 +507,14 @@ function sw(t){
   document.body.style.background=bg;
   document.getElementById('ctxlbl').style.color=bg;
   document.getElementById('ctxarr').style.background=bg;
+  // Auto-connecter le calendrier si token valide
+  const saved=localStorage.getItem('gct_'+t);
+  const savedTime=parseInt(localStorage.getItem('gct_time_'+t)||'0');
+  const expired=Date.now()-savedTime>55*60*1000;
+  if(saved&&!expired){
+    gcToks[t]=saved;gcSetSt(t,true);
+    if(t==='duo')gcLoadCommun(saved);else gcLoadPerso(t,saved);
+  }
 }
 let swX=null;
 document.addEventListener('touchstart',e=>{swX=e.touches[0].clientX;},{passive:true});
@@ -623,13 +635,7 @@ function gcInit(){
     client_id:GCID,
     scope:'https://www.googleapis.com/auth/calendar.readonly',
     callback:async(r)=>{
-      if(r.error){
-        // Si prompt:none a échoué, redemander avec consent
-        if(r.error==='interaction_required'||r.error==='access_denied'){
-          tclient.requestAccessToken({prompt:'consent'});
-        }
-        return;
-      }
+      if(r.error)return;
       gcToks[gcWho]=r.access_token;
       localStorage.setItem('gct_'+gcWho,r.access_token);
       localStorage.setItem('gct_time_'+gcWho,Date.now().toString());
@@ -645,20 +651,14 @@ function gcConnect(who){
   if(!tclient){setTimeout(()=>{gcInit();gcConnect(who);},1000);return;}
   const saved=localStorage.getItem('gct_'+who);
   const savedTime=parseInt(localStorage.getItem('gct_time_'+who)||'0');
-  const expired=Date.now()-savedTime>55*60*1000; // 55 minutes
+  const expired=Date.now()-savedTime>55*60*1000;
   if(saved&&!expired){
     gcToks[who]=saved;gcSetSt(who,true);
     if(who==='duo')gcLoadCommun(saved);else gcLoadPerso(who,saved);
     return;
   }
-  // Token expiré ou absent - demander silencieusement d'abord
-  const prompt=saved?'none':'consent';
-  try{
-    tclient.requestAccessToken({prompt});
-  }catch(e){
-    // Si prompt:none échoue, on redemande avec consent
-    tclient.requestAccessToken({prompt:'consent'});
-  }
+  // Token expiré - toujours redemander (Google est rapide si déjà connecté)
+  tclient.requestAccessToken({prompt:'consent'});
 }
 function gcSetSt(who,on){
   const l=document.getElementById('gcl-'+who),s=document.getElementById('gcs-'+who);
