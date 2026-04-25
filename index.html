@@ -391,33 +391,36 @@ function cycleCtx(){
   document.getElementById('ctxsub').textContent=ctxL[ctxM];
   renderCtx();
 }
-// Cache des events GCal par date
-const gcEvCache={};
-function cacheGcEvs(evs){
+// Cache des events GCal par onglet et par date
+const gcEvCache={duo:{},moon:{},oli:{}};
+let cacheTab='duo';
+function cacheGcEvs(evs,tab){
+  if(!gcEvCache[tab])gcEvCache[tab]={};
   evs.forEach(ev=>{
     if(!ev.start)return;
     const d=new Date(ev.start.dateTime||ev.start.date);
     const k=d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate();
-    if(!gcEvCache[k])gcEvCache[k]=[];
-    if(!gcEvCache[k].find(e=>e.id===ev.id))gcEvCache[k].push(ev);
+    if(!gcEvCache[tab][k])gcEvCache[tab][k]=[];
+    if(!gcEvCache[tab][k].find(e=>e.id===ev.id))gcEvCache[tab][k].push(ev);
   });
 }
-function getEvForDate(d){
+function getEvForDate(d,tab){
   const k=d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate();
-  return gcEvCache[k]||[];
+  return(gcEvCache[tab]&&gcEvCache[tab][k])||[];
 }
 
-async function fetchCtxEvents(tmin,tmax,tok,calId){
+async function fetchCtxEvents(tmin,tmax,tok,calId,tab){
   try{
     const r=await fetch(`https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calId)}/events?timeMin=${tmin}&timeMax=${tmax}&singleEvents=true&orderBy=startTime`,{headers:{'Authorization':'Bearer '+tok}});
     const d=await r.json();
-    if(d.items)cacheGcEvs(d.items);
+    if(d.items)cacheGcEvs(d.items,tab);
   }catch(e){}
 }
 
 async function loadCtxEvents(tmin,tmax){
-  // Déterminer l'onglet actif
   const activeTab=['duo','moon','oli'].find(t=>document.getElementById('v'+t).style.display!=='none')||'duo';
+  // Vider le cache de cet onglet avant de recharger
+  gcEvCache[activeTab]={};
   const tok=localStorage.getItem('gct_'+activeTab)
     ||(activeTab==='duo'?localStorage.getItem('gct_moon')||localStorage.getItem('gct_oli'):null);
   if(!tok)return;
@@ -425,14 +428,12 @@ async function loadCtxEvents(tmin,tmax){
     const cals=await(await fetch('https://www.googleapis.com/calendar/v3/users/me/calendarList',{headers:{'Authorization':'Bearer '+tok}})).json();
     if(cals.error)return;
     if(activeTab==='duo'){
-      // Onglet commun : charger seulement Cal Commun
       const commun=(cals.items||[]).find(c=>c.summary&&c.summary.toLowerCase().includes('commun'));
-      if(commun)await fetchCtxEvents(tmin,tmax,tok,commun.id);
+      if(commun)await fetchCtxEvents(tmin,tmax,tok,commun.id,activeTab);
     }else{
-      // Onglet perso : charger tous les agendas SAUF Cal Commun
       for(const cal of(cals.items||[])){
         if(cal.summary&&cal.summary.toLowerCase().includes('commun'))continue;
-        await fetchCtxEvents(tmin,tmax,tok,cal.id);
+        await fetchCtxEvents(tmin,tmax,tok,cal.id,activeTab);
       }
     }
   }catch(e){}
@@ -481,11 +482,11 @@ async function renderCtx(){
       // Vue mois : agréger les events de la semaine
       let wEvs=[];
       let cur=new Date(d.s);
-      while(cur<=d.e){wEvs=wEvs.concat(getEvForDate(cur));cur.setDate(cur.getDate()+1);}
+      while(cur<=d.e){wEvs=wEvs.concat(getEvForDate(cur,activeTab));cur.setDate(cur.getDate()+1);}
       const evTxt=wEvs.length>0?wEvs.slice(0,2).map(e=>fmtT(e)+' '+e.summary).join(', ')+(wEvs.length>2?'...':''):'Aucun rdv';
       return`<div class="ctxcell"><div class="ctxcd">Sem.</div><div class="ctxcdt">${d.s.getDate()}-${d.e.getDate()} ${MN[d.e.getMonth()]}</div><div class="ctxcn">${evTxt}</div></div>`;
     }
-    const evs=getEvForDate(d);
+    const evs=getEvForDate(d,activeTab);
     const evTxt=evs.length>0?evs.slice(0,2).map(e=>fmtT(e)+' '+e.summary).join(', ')+(evs.length>2?'...':''):'Aucun rdv';
     return`<div class="ctxcell"><div class="ctxcd">${DSH[d.getDay()]}</div><div class="ctxcdt">${d.getDate()} ${MN[d.getMonth()]}</div><div class="ctxcn">${evTxt}</div></div>`;
   }).join('');
@@ -622,9 +623,16 @@ function gcInit(){
     client_id:GCID,
     scope:'https://www.googleapis.com/auth/calendar.readonly',
     callback:async(r)=>{
-      if(r.error)return;
+      if(r.error){
+        // Si prompt:none a échoué, redemander avec consent
+        if(r.error==='interaction_required'||r.error==='access_denied'){
+          tclient.requestAccessToken({prompt:'consent'});
+        }
+        return;
+      }
       gcToks[gcWho]=r.access_token;
       localStorage.setItem('gct_'+gcWho,r.access_token);
+      localStorage.setItem('gct_time_'+gcWho,Date.now().toString());
       gcSetSt(gcWho,true);
       if(gcWho==='duo')gcLoadCommun(r.access_token);
       else gcLoadPerso(gcWho,r.access_token);
@@ -636,8 +644,21 @@ function gcConnect(who){
   if(!tclient)gcInit();
   if(!tclient){setTimeout(()=>{gcInit();gcConnect(who);},1000);return;}
   const saved=localStorage.getItem('gct_'+who);
-  if(saved){gcToks[who]=saved;gcSetSt(who,true);if(who==='duo')gcLoadCommun(saved);else gcLoadPerso(who,saved);return;}
-  tclient.requestAccessToken({prompt:'consent'});
+  const savedTime=parseInt(localStorage.getItem('gct_time_'+who)||'0');
+  const expired=Date.now()-savedTime>55*60*1000; // 55 minutes
+  if(saved&&!expired){
+    gcToks[who]=saved;gcSetSt(who,true);
+    if(who==='duo')gcLoadCommun(saved);else gcLoadPerso(who,saved);
+    return;
+  }
+  // Token expiré ou absent - demander silencieusement d'abord
+  const prompt=saved?'none':'consent';
+  try{
+    tclient.requestAccessToken({prompt});
+  }catch(e){
+    // Si prompt:none échoue, on redemande avec consent
+    tclient.requestAccessToken({prompt:'consent'});
+  }
 }
 function gcSetSt(who,on){
   const l=document.getElementById('gcl-'+who),s=document.getElementById('gcs-'+who);
@@ -746,7 +767,19 @@ function loadAll(){
   renderCtx();
   window.addEventListener('load',()=>{
     setTimeout(gcInit,1000);
-    ['moon','oli','duo'].forEach(w=>{const t=localStorage.getItem('gct_'+w);if(t){gcToks[w]=t;gcSetSt(w,true);if(w==='duo')gcLoadCommun(t);else gcLoadPerso(w,t);}});
+    ['moon','oli','duo'].forEach(w=>{
+    const t=localStorage.getItem('gct_'+w);
+    const savedTime=parseInt(localStorage.getItem('gct_time_'+w)||'0');
+    const expired=Date.now()-savedTime>55*60*1000;
+    if(t&&!expired){
+      gcToks[w]=t;gcSetSt(w,true);
+      if(w==='duo')gcLoadCommun(t);else gcLoadPerso(w,t);
+    }else if(t&&expired){
+      // Token expiré - reconnecter silencieusement
+      gcWho=w;
+      if(tclient)try{tclient.requestAccessToken({prompt:'none'});}catch(e){}
+    }
+  });
   });
 }
 async function init(){
