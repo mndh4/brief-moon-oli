@@ -535,10 +535,12 @@ function sc(k,v){localStorage.setItem(k,JSON.stringify(v));}
 function defCats(w){
   const cols={duo:'var(--duo)',moon:'var(--pk)',oli:'var(--cy)'};
   const col=cols[w]||'var(--duo)';
+  // IDs uniques par owner pour éviter les collisions
+  const p=w+'_';
   return[
-    {id:'maison',name:'Maison',open:true,col:col,subs:[{id:'cuisine',name:'Cuisine',open:true},{id:'salon',name:'Salon',open:false},{id:'chambre',name:'Chambre',open:false}]},
-    {id:'jardin',name:'Jardin',open:false,col:'var(--gr)',subs:[{id:'entretien',name:'Entretien',open:true}]},
-    {id:'admin',name:'Admin',open:false,col:'var(--or)',subs:[{id:'factures',name:'Factures',open:true},{id:'docs',name:'Documents',open:false}]}
+    {id:p+'maison',name:'Maison',open:true,col:col,subs:[{id:p+'cuisine',name:'Cuisine',open:true},{id:p+'salon',name:'Salon',open:false},{id:p+'chambre',name:'Chambre',open:false}]},
+    {id:p+'jardin',name:'Jardin',open:false,col:'var(--gr)',subs:[{id:p+'entretien',name:'Entretien',open:true}]},
+    {id:p+'admin',name:'Admin',open:false,col:'var(--or)',subs:[{id:p+'factures',name:'Factures',open:true},{id:p+'docs',name:'Documents',open:false}]}
   ];
 }
 function getCats(w){return gc('cats_'+w)||defCats(w);}
@@ -805,6 +807,13 @@ function setupRealtime(){
 }
 
 async function init(){
+  // Migration : vider les anciennes cats sans préfixe owner
+  ['duo','moon','oli'].forEach(w=>{
+    const cats=gc('cats_'+w);
+    if(cats&&cats.length>0&&cats[0].id==='maison'){
+      localStorage.removeItem('cats_'+w);
+    }
+  });
   const{data:{session}}=await supa.auth.getSession();
   if(session){
     document.getElementById('auth').style.display='none';
