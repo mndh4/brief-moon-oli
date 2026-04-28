@@ -784,23 +784,22 @@ function loadAll(){
   });
 }
 
+let realtimeChannel=null;
 function setupRealtime(){
-  // Créer le channel, ajouter TOUS les listeners, puis subscribe une seule fois
-  const channel = supa.channel('brief-realtime');
-  channel.on('postgres_changes',{event:'*',schema:'public',table:'To do'},(payload)=>{
-    console.log('Realtime To do:', payload.eventType);
+  // Ne créer le channel qu'une seule fois
+  if(realtimeChannel)return;
+  realtimeChannel = supa.channel('brief-realtime');
+  realtimeChannel.on('postgres_changes',{event:'*',schema:'public',table:'To do'},(payload)=>{
     ['duo','moon','oli'].forEach(w=>loadTodos(w));
   });
-  channel.on('postgres_changes',{event:'*',schema:'public',table:'Interests'},(payload)=>{
-    console.log('Realtime Interests:', payload.eventType);
+  realtimeChannel.on('postgres_changes',{event:'*',schema:'public',table:'Interests'},(payload)=>{
     ['duo','moon','oli'].forEach(w=>loadInts(w));
   });
-  channel.on('postgres_changes',{event:'*',schema:'public',table:'Courses'},(payload)=>{
-    console.log('Realtime Courses:', payload.eventType);
+  realtimeChannel.on('postgres_changes',{event:'*',schema:'public',table:'Courses'},(payload)=>{
     loadCourses();
   });
-  channel.subscribe((status)=>{
-    console.log('Realtime status:', status);
+  realtimeChannel.subscribe((status)=>{
+    console.log('Realtime:', status);
   });
 }
 
