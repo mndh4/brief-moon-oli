@@ -765,6 +765,7 @@ function loadAll(){
   ['duo','moon','oli'].forEach(w=>{loadTodos(w);loadInts(w);});
   loadCourses();
   renderCtx();
+  setupRealtime();
   window.addEventListener('load',()=>{
     setTimeout(gcInit,1000);
     ['moon','oli','duo'].forEach(w=>{
@@ -782,6 +783,21 @@ function loadAll(){
   });
   });
 }
+
+function setupRealtime(){
+  supa.channel('brief-realtime')
+    .on('postgres_changes',{event:'*',schema:'public',table:'To do'},()=>{
+      ['duo','moon','oli'].forEach(w=>loadTodos(w));
+    })
+    .on('postgres_changes',{event:'*',schema:'public',table:'Interests'},()=>{
+      ['duo','moon','oli'].forEach(w=>loadInts(w));
+    })
+    .on('postgres_changes',{event:'*',schema:'public',table:'Courses'},()=>{
+      loadCourses();
+    })
+    .subscribe();
+}
+
 async function init(){
   const{data:{session}}=await supa.auth.getSession();
   if(session){
