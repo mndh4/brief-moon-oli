@@ -785,17 +785,23 @@ function loadAll(){
 }
 
 function setupRealtime(){
-  supa.channel('brief-realtime')
-    .on('postgres_changes',{event:'*',schema:'public',table:'To do'},()=>{
-      ['duo','moon','oli'].forEach(w=>loadTodos(w));
-    })
-    .on('postgres_changes',{event:'*',schema:'public',table:'Interests'},()=>{
-      ['duo','moon','oli'].forEach(w=>loadInts(w));
-    })
-    .on('postgres_changes',{event:'*',schema:'public',table:'Courses'},()=>{
-      loadCourses();
-    })
-    .subscribe();
+  // Créer le channel, ajouter TOUS les listeners, puis subscribe une seule fois
+  const channel = supa.channel('brief-realtime');
+  channel.on('postgres_changes',{event:'*',schema:'public',table:'To do'},(payload)=>{
+    console.log('Realtime To do:', payload.eventType);
+    ['duo','moon','oli'].forEach(w=>loadTodos(w));
+  });
+  channel.on('postgres_changes',{event:'*',schema:'public',table:'Interests'},(payload)=>{
+    console.log('Realtime Interests:', payload.eventType);
+    ['duo','moon','oli'].forEach(w=>loadInts(w));
+  });
+  channel.on('postgres_changes',{event:'*',schema:'public',table:'Courses'},(payload)=>{
+    console.log('Realtime Courses:', payload.eventType);
+    loadCourses();
+  });
+  channel.subscribe((status)=>{
+    console.log('Realtime status:', status);
+  });
 }
 
 async function init(){
