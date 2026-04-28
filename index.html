@@ -533,12 +533,13 @@ document.addEventListener('touchend',e=>{
 function gc(k){try{return JSON.parse(localStorage.getItem(k)||'null');}catch{return null;}}
 function sc(k,v){localStorage.setItem(k,JSON.stringify(v));}
 function defCats(w){
-  if(w==='duo')return[
-    {id:'maison',name:'Maison',open:true,col:'var(--duo)',subs:[{id:'cuisine',name:'Cuisine',open:true},{id:'salon',name:'Salon',open:false},{id:'chambre',name:'Chambre',open:false}]},
-    {id:'jardin',name:'Jardin',open:false,col:'var(--cy)',subs:[{id:'entretien',name:'Entretien',open:true}]},
+  const cols={duo:'var(--duo)',moon:'var(--pk)',oli:'var(--cy)'};
+  const col=cols[w]||'var(--duo)';
+  return[
+    {id:'maison',name:'Maison',open:true,col:col,subs:[{id:'cuisine',name:'Cuisine',open:true},{id:'salon',name:'Salon',open:false},{id:'chambre',name:'Chambre',open:false}]},
+    {id:'jardin',name:'Jardin',open:false,col:'var(--gr)',subs:[{id:'entretien',name:'Entretien',open:true}]},
     {id:'admin',name:'Admin',open:false,col:'var(--or)',subs:[{id:'factures',name:'Factures',open:true},{id:'docs',name:'Documents',open:false}]}
   ];
-  return[];
 }
 function getCats(w){return gc('cats_'+w)||defCats(w);}
 function saveCats(w,d){sc('cats_'+w,d);}
@@ -587,7 +588,7 @@ async function togTodo(id,w){const items=await sbGet('todos','owner=eq.'+w);cons
 async function delTodo(id,w){await sbDel('todos',id);loadTodos(w);}
 
 // INTERESTS
-function defInts(w){if(w==='duo')return[{id:'restos',name:'Restos a tester'},{id:'films',name:'Films et series a voir'}];return[];}
+function defInts(w){return[{id:'restos',name:'Restos a tester'},{id:'films',name:'Films et series a voir'}];}
 function getInts(w){return gc('ints_'+w)||defInts(w);}
 function saveInts(w,d){sc('ints_'+w,d);}
 async function loadInts(w){
