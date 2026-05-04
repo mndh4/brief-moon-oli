@@ -409,17 +409,8 @@ function getEvForDate(d,tab){
   return(gcEvCache[tab]&&gcEvCache[tab][k])||[];
 }
 
-async function fetchCtxEvents(tmin,tmax,tok,calId,tab){
-  try{
-    const r=await fetch(`https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calId)}/events?timeMin=${tmin}&timeMax=${tmax}&singleEvents=true&orderBy=startTime`,{headers:{'Authorization':'Bearer '+tok}});
-    const d=await r.json();
-    if(d.items)cacheGcEvs(d.items,tab);
-  }catch(e){}
-}
-
 async function loadCtxEvents(tmin,tmax){
   const activeTab=['duo','moon','oli'].find(t=>document.getElementById('v'+t).style.display!=='none')||'duo';
-  // Vider le cache de cet onglet avant de recharger
   gcEvCache[activeTab]={};
   const tok=localStorage.getItem('gct_'+activeTab)
     ||(activeTab==='duo'?localStorage.getItem('gct_moon')||localStorage.getItem('gct_oli'):null);
@@ -427,16 +418,23 @@ async function loadCtxEvents(tmin,tmax){
   try{
     const cals=await(await fetch('https://www.googleapis.com/calendar/v3/users/me/calendarList',{headers:{'Authorization':'Bearer '+tok}})).json();
     if(cals.error)return;
+    // Filtrer les calendriers selon l'onglet
+    const calIds=[];
     if(activeTab==='duo'){
       const commun=(cals.items||[]).find(c=>c.summary&&c.summary.toLowerCase().includes('commun'));
-      if(commun)await fetchCtxEvents(tmin,tmax,tok,commun.id,activeTab);
+      if(commun)calIds.push(commun.id);
     }else{
-      for(const cal of(cals.items||[])){
-        if(cal.summary&&cal.summary.toLowerCase().includes('commun'))continue;
-        await fetchCtxEvents(tmin,tmax,tok,cal.id,activeTab);
-      }
+      (cals.items||[]).forEach(c=>{
+        if(!c.summary||!c.summary.toLowerCase().includes('commun'))calIds.push(c.id);
+      });
     }
-  }catch(e){}
+    // Charger tous les calendriers en parallèle (une seule requête par cal)
+    const results=await Promise.all(calIds.map(calId=>
+      fetch(`https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calId)}/events?timeMin=${tmin}&timeMax=${tmax}&singleEvents=true&orderBy=startTime&maxResults=50`,{headers:{'Authorization':'Bearer '+tok}})
+        .then(r=>r.json()).catch(()=>({items:[]}))
+    ));
+    results.forEach(d=>{if(d.items)cacheGcEvs(d.items,activeTab);});
+  }catch(e){console.warn('loadCtxEvents error:',e);}
 }
 
 async function renderCtx(){
