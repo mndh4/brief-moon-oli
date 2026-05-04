@@ -510,7 +510,7 @@ function saveCats(w,d){sc('cats_'+w,d);}
 
 async function loadTodos(w){
   const cats=getCats(w);
-  const items=await sbGet('To do','owner=eq.'+w);
+  const items=await sbGet('todos','owner=eq.'+w);
   const el=document.getElementById('cats-'+w);if(!el)return;
   if(!cats.length){el.innerHTML='<div class="empty">Aucune categorie</div>';return;}
   el.innerHTML=cats.map((c,ci)=>{
@@ -547,9 +547,9 @@ function addCat(w){const inp=document.getElementById('nc-'+w);const n=inp.value.
 function delCat(w,ci){const c=getCats(w);c.splice(ci,1);saveCats(w,c);loadTodos(w);}
 function addSub(w,ci){const inp=document.getElementById(`sa_${w}_${ci}`);const n=inp.value.trim();if(!n)return;const c=getCats(w);c[ci].subs.push({id:'s'+Date.now(),name:n,open:true});saveCats(w,c);inp.value='';loadTodos(w);}
 function delSub(w,ci,si){const c=getCats(w);c[ci].subs.splice(si,1);saveCats(w,c);loadTodos(w);}
-async function addTodo(w,cat,sub,ci,si){const inp=document.getElementById(`ia_${w}_${ci}_${si}`);const t=inp.value.trim();if(!t)return;await sbPost('To do',{owner:w,category:cat,subcategory:sub,text:t,done:false});inp.value='';loadTodos(w);}
-async function togTodo(id,w){const items=await sbGet('To do','owner=eq.'+w);const it=items.find(i=>i.id===id);if(it)await sbPatch('To do',id,{done:!it.done});loadTodos(w);}
-async function delTodo(id,w){await sbDel('To do',id);loadTodos(w);}
+async function addTodo(w,cat,sub,ci,si){const inp=document.getElementById(`ia_${w}_${ci}_${si}`);const t=inp.value.trim();if(!t)return;await sbPost('todos',{owner:w,category:cat,subcategory:sub,text:t,done:false});inp.value='';loadTodos(w);}
+async function togTodo(id,w){const items=await sbGet('todos','owner=eq.'+w);const it=items.find(i=>i.id===id);if(it)await sbPatch('todos',id,{done:!it.done});loadTodos(w);}
+async function delTodo(id,w){await sbDel('todos',id);loadTodos(w);}
 
 // INTERESTS
 function defInts(w){if(w==='duo')return[{id:'restos',name:'Restos a tester'},{id:'films',name:'Films et series a voir'}];return[];}
@@ -557,7 +557,7 @@ function getInts(w){return gc('ints_'+w)||defInts(w);}
 function saveInts(w,d){sc('ints_'+w,d);}
 async function loadInts(w){
   const cats=getInts(w);
-  const items=await sbGet('Interests','owner=eq.'+w);
+  const items=await sbGet('interests','owner=eq.'+w);
   const el=document.getElementById('int-'+w);if(!el)return;
   const tag=w==='duo'?'tgd':w==='moon'?'tgm':'tgo';
   const tl=w==='duo'?'Commun':w==='moon'?'Moon':'Oli';
@@ -576,20 +576,20 @@ async function loadInts(w){
 }
 function addIntCat(w){const inp=document.getElementById('ni-'+w);const n=inp.value.trim();if(!n)return;const c=getInts(w);c.push({id:'i'+Date.now(),name:n});saveInts(w,c);inp.value='';loadInts(w);}
 function delIntCat(w,ci){const c=getInts(w);c.splice(ci,1);saveInts(w,c);loadInts(w);}
-async function addInt(w,cat,ci){const inp=document.getElementById(`ii_${w}_${ci}`);const t=inp.value.trim();if(!t)return;await sbPost('Interests',{owner:w,category:cat,text:t,done:false});inp.value='';loadInts(w);}
-async function togInt(id,w){const items=await sbGet('Interests','owner=eq.'+w);const it=items.find(i=>i.id===id);if(it)await sbPatch('Interests',id,{done:!it.done});loadInts(w);}
-async function delInt(id,w){await sbDel('Interests',id);loadInts(w);}
+async function addInt(w,cat,ci){const inp=document.getElementById(`ii_${w}_${ci}`);const t=inp.value.trim();if(!t)return;await sbPost('interests',{owner:w,category:cat,text:t,done:false});inp.value='';loadInts(w);}
+async function togInt(id,w){const items=await sbGet('interests','owner=eq.'+w);const it=items.find(i=>i.id===id);if(it)await sbPatch('interests',id,{done:!it.done});loadInts(w);}
+async function delInt(id,w){await sbDel('interests',id);loadInts(w);}
 
 // COURSES
 async function loadCourses(){
-  const items=await sbGet('Courses','');
+  const items=await sbGet('courses','');
   const el=document.getElementById('cgrid');if(!el)return;
   if(!items.length){el.innerHTML='<div class="empty" style="grid-column:1/-1">Liste vide</div>';return;}
   el.innerHTML=items.map(it=>`<div class="citem"><input type="checkbox" class="ccb" ${it.done?'checked':''} onchange="togC('${it.id}')"/><span class="cnm${it.done?' dn':''}">${it.text}</span><button class="delbtn" onclick="delC('${it.id}')">x</button></div>`).join('');
 }
-async function addCourse(){const inp=document.getElementById('cin');const t=inp.value.trim();if(!t)return;await sbPost('Courses',{text:t,done:false});inp.value='';loadCourses();}
-async function togC(id){const items=await sbGet('Courses','');const it=items.find(i=>i.id===id);if(it)await sbPatch('Courses',id,{done:!it.done});loadCourses();}
-async function delC(id){await sbDel('Courses',id);loadCourses();}
+async function addCourse(){const inp=document.getElementById('cin');const t=inp.value.trim();if(!t)return;await sbPost('courses',{text:t,done:false});inp.value='';loadCourses();}
+async function togC(id){const items=await sbGet('courses','');const it=items.find(i=>i.id===id);if(it)await sbPatch('courses',id,{done:!it.done});loadCourses();}
+async function delC(id){await sbDel('courses',id);loadCourses();}
 
 // GOOGLE CALENDAR
 let tclient=null,gcWho=null;
