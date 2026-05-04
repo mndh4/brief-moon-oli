@@ -469,17 +469,10 @@ async function renderCtx(){
   }
 
   tl.textContent=title;
-  gr.innerHTML='<div class="ctxcn" style="grid-column:1/-1">Chargement...</div>';
 
-  // Charger les events seulement si token valide pour cet onglet
-  const tabTok=localStorage.getItem('gct_'+activeTab);
-  const tabTime=parseInt(localStorage.getItem('gct_time_'+activeTab)||'0');
-  const tabExpired=Date.now()-tabTime>55*60*1000;
-  if(tabTok && !tabExpired && tmin && tmax){
-    await loadCtxEvents(tmin,tmax);
-  }
-
-  gr.innerHTML=days.map(d=>{
+  // Afficher la structure immédiatement sans attendre GCal
+  const renderGrid=()=>{
+    gr.innerHTML=days.map(d=>{
     if(d.w){
       // Vue mois : agréger les events de la semaine
       let wEvs=[];
@@ -606,7 +599,16 @@ async function loadInts(w){
       <div class="addrow" style="margin-top:6px"><input class="addin" id="ii_${w}_${ci}" placeholder="Ajouter..."/><button class="addbtn" onclick="addInt('${w}','${c.id}',${ci})">+</button></div>
       ${ci<cats.length-1?'<div class="isep"></div>':''}
     </div>`;
-  }).join('');
+    }).join('');
+  };
+  renderGrid();
+
+  const tabTok=localStorage.getItem('gct_'+activeTab);
+  const tabTime=parseInt(localStorage.getItem('gct_time_'+activeTab)||'0');
+  const tabExpired=Date.now()-tabTime>55*60*1000;
+  if(tabTok && !tabExpired && tmin && tmax){
+    loadCtxEvents(tmin,tmax).then(()=>renderGrid());
+  }
 }
 function addIntCat(w){const inp=document.getElementById('ni-'+w);const n=inp.value.trim();if(!n)return;const c=getInts(w);c.push({id:'i'+Date.now(),name:n});saveInts(w,c);inp.value='';loadInts(w);}
 function delIntCat(w,ci){const c=getInts(w);c.splice(ci,1);saveInts(w,c);loadInts(w);}
